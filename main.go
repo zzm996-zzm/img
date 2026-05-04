@@ -1,15 +1,27 @@
 package main
 
 import (
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"database/sql"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	_ "modernc.org/sqlite"
 )
 
 type paidRecord struct {
@@ -22,11 +34,35 @@ type paidRecord struct {
 var (
 	paidMu     sync.RWMutex
 	paidEmails = map[string]paidRecord{}
+	appDB      *sql.DB
+	authMu     sync.Mutex
+	authHits   = map[string][]time.Time{}
+	secretOnce sync.Once
+	secretKey  string
+)
+
+const (
+	sessionCookieName = "imgtools_session"
+	passwordIter      = 120000
+	maxJSONBody       = 32 << 10
+	authWindow        = 10 * time.Minute
+	authMaxHits       = 30
 )
 
 func main() {
+	db, err := openDB()
+	if err != nil {
+		log.Fatalf("database init failed: %v", err)
+	}
+	appDB = db
+	defer appDB.Close()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleIndex)
+	mux.HandleFunc("/api/register", handleRegister)
+	mux.HandleFunc("/api/login", handleLogin)
+	mux.HandleFunc("/api/logout", handleLogout)
+	mux.HandleFunc("/api/me", handleMe)
 	mux.HandleFunc("/api/paypal-webhook", handlePayPalWebhook)
 	mux.HandleFunc("/google6409d0c57bc30ecb.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
@@ -60,6 +96,457 @@ func listenAndServe(handler http.Handler, port string, fatal bool) {
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(indexHTML))
+}
+
+func openDB() (*sql.DB, error) {
+	path := os.Getenv("DB_PATH")
+	if path == "" {
+		path = "data/imgtools.db"
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return nil, err
+	}
+
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+	db.SetConnMaxLifetime(0)
+
+	if _, err := db.Exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA foreign_keys=ON;`); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if err := migrateDB(db); err != nil {
+		db.Close()
+		return nil, err
+	}
+	return db, nil
+}
+
+func migrateDB(db *sql.DB) error {
+	_, err := db.Exec(`
+CREATE TABLE IF NOT EXISTS users (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	email TEXT NOT NULL UNIQUE,
+	password_hash TEXT NOT NULL,
+	created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS licenses (
+	email TEXT PRIMARY KEY,
+	paid INTEGER NOT NULL DEFAULT 0,
+	source TEXT NOT NULL DEFAULT '',
+	event_type TEXT NOT NULL DEFAULT '',
+	resource_id TEXT NOT NULL DEFAULT '',
+	updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+`)
+	return err
+}
+
+type authRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type sessionClaims struct {
+	UserID int64  `json:"uid"`
+	Email  string `json:"email"`
+	Iat    int64  `json:"iat"`
+	Exp    int64  `json:"exp"`
+}
+
+func handleRegister(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"ok": false, "error": "method_not_allowed"})
+		return
+	}
+	if !allowAuthRequest(r) {
+		writeJSON(w, http.StatusTooManyRequests, map[string]any{"ok": false, "error": "too_many_requests"})
+		return
+	}
+	req, ok := readAuthRequest(w, r)
+	if !ok {
+		return
+	}
+	email := normalizeEmail(req.Email)
+	if email == "" || len(email) > 254 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid_email"})
+		return
+	}
+	if len(req.Password) < 8 || len(req.Password) > 128 {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "weak_password"})
+		return
+	}
+
+	hash, err := hashPassword(req.Password)
+	if err != nil {
+		log.Printf("password hash error: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": "server_error"})
+		return
+	}
+	res, err := appDB.Exec(
+		`INSERT INTO users (email, password_hash, created_at) VALUES (?, ?, ?)`,
+		email, hash, time.Now().UTC().Format(time.RFC3339),
+	)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "constraint") {
+			writeJSON(w, http.StatusConflict, map[string]any{"ok": false, "error": "email_exists"})
+			return
+		}
+		log.Printf("register insert error: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": "server_error"})
+		return
+	}
+	userID, _ := res.LastInsertId()
+	setSessionCookie(w, r, userID, email)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "email": email, "paid": isPaidEmail(email)})
+}
+
+func handleLogin(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"ok": false, "error": "method_not_allowed"})
+		return
+	}
+	if !allowAuthRequest(r) {
+		writeJSON(w, http.StatusTooManyRequests, map[string]any{"ok": false, "error": "too_many_requests"})
+		return
+	}
+	req, ok := readAuthRequest(w, r)
+	if !ok {
+		return
+	}
+	email := normalizeEmail(req.Email)
+	if email == "" {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{"ok": false, "error": "invalid_credentials"})
+		return
+	}
+
+	var userID int64
+	var storedHash string
+	err := appDB.QueryRow(`SELECT id, password_hash FROM users WHERE email = ?`, email).Scan(&userID, &storedHash)
+	if errors.Is(err, sql.ErrNoRows) {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{"ok": false, "error": "invalid_credentials"})
+		return
+	}
+	if err != nil {
+		log.Printf("login query error: %v", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"ok": false, "error": "server_error"})
+		return
+	}
+	if !verifyPassword(req.Password, storedHash) {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{"ok": false, "error": "invalid_credentials"})
+		return
+	}
+
+	setSessionCookie(w, r, userID, email)
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "email": email, "paid": isPaidEmail(email)})
+}
+
+func handleLogout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"ok": false, "error": "method_not_allowed"})
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isSecureRequest(r),
+	})
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func handleMe(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"ok": false, "error": "method_not_allowed"})
+		return
+	}
+	claims, ok := currentSession(r)
+	if !ok {
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "authenticated": false, "paid": false})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":            true,
+		"authenticated": true,
+		"email":         claims.Email,
+		"paid":          isPaidEmail(claims.Email),
+	})
+}
+
+func readAuthRequest(w http.ResponseWriter, r *http.Request) (authRequest, bool) {
+	defer r.Body.Close()
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxJSONBody))
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid_body"})
+		return authRequest{}, false
+	}
+	var req authRequest
+	if err := json.Unmarshal(body, &req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid_json"})
+		return authRequest{}, false
+	}
+	return req, true
+}
+
+func allowAuthRequest(r *http.Request) bool {
+	key := clientIP(r)
+	now := time.Now()
+	cutoff := now.Add(-authWindow)
+
+	authMu.Lock()
+	defer authMu.Unlock()
+
+	hits := authHits[key]
+	kept := hits[:0]
+	for _, hit := range hits {
+		if hit.After(cutoff) {
+			kept = append(kept, hit)
+		}
+	}
+	if len(kept) >= authMaxHits {
+		authHits[key] = kept
+		return false
+	}
+	authHits[key] = append(kept, now)
+	return true
+}
+
+func clientIP(r *http.Request) string {
+	if forwarded := r.Header.Get("X-Forwarded-For"); forwarded != "" {
+		first := strings.TrimSpace(strings.Split(forwarded, ",")[0])
+		if first != "" {
+			return first
+		}
+	}
+	if realIP := strings.TrimSpace(r.Header.Get("X-Real-IP")); realIP != "" {
+		return realIP
+	}
+	host := r.RemoteAddr
+	if idx := strings.LastIndex(host, ":"); idx > -1 {
+		return host[:idx]
+	}
+	return host
+}
+
+func hashPassword(password string) (string, error) {
+	salt := make([]byte, 16)
+	if _, err := rand.Read(salt); err != nil {
+		return "", err
+	}
+	hash := pbkdf2SHA256([]byte(password), salt, passwordIter, 32)
+	return fmt.Sprintf(
+		"pbkdf2_sha256$%d$%s$%s",
+		passwordIter,
+		base64.RawURLEncoding.EncodeToString(salt),
+		base64.RawURLEncoding.EncodeToString(hash),
+	), nil
+}
+
+func verifyPassword(password, encoded string) bool {
+	parts := strings.Split(encoded, "$")
+	if len(parts) != 4 || parts[0] != "pbkdf2_sha256" {
+		return false
+	}
+	iter, err := strconv.Atoi(parts[1])
+	if err != nil || iter < 10000 {
+		return false
+	}
+	salt, err := base64.RawURLEncoding.DecodeString(parts[2])
+	if err != nil {
+		return false
+	}
+	expected, err := base64.RawURLEncoding.DecodeString(parts[3])
+	if err != nil {
+		return false
+	}
+	actual := pbkdf2SHA256([]byte(password), salt, iter, len(expected))
+	return subtle.ConstantTimeCompare(actual, expected) == 1
+}
+
+func pbkdf2SHA256(password, salt []byte, iter, keyLen int) []byte {
+	hashLen := sha256.Size
+	blocks := (keyLen + hashLen - 1) / hashLen
+	out := make([]byte, 0, blocks*hashLen)
+	for block := 1; block <= blocks; block++ {
+		mac := hmac.New(sha256.New, password)
+		mac.Write(salt)
+		mac.Write([]byte{byte(block >> 24), byte(block >> 16), byte(block >> 8), byte(block)})
+		u := mac.Sum(nil)
+		t := make([]byte, len(u))
+		copy(t, u)
+		for i := 1; i < iter; i++ {
+			mac = hmac.New(sha256.New, password)
+			mac.Write(u)
+			u = mac.Sum(nil)
+			for j := range t {
+				t[j] ^= u[j]
+			}
+		}
+		out = append(out, t...)
+	}
+	return out[:keyLen]
+}
+
+func setSessionCookie(w http.ResponseWriter, r *http.Request, userID int64, email string) {
+	token, err := signSession(sessionClaims{
+		UserID: userID,
+		Email:  email,
+		Iat:    time.Now().Unix(),
+		Exp:    time.Now().Add(180 * 24 * time.Hour).Unix(),
+	})
+	if err != nil {
+		log.Printf("session sign error: %v", err)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     sessionCookieName,
+		Value:    token,
+		Path:     "/",
+		MaxAge:   180 * 24 * 60 * 60,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   isSecureRequest(r),
+	})
+}
+
+func currentSession(r *http.Request) (sessionClaims, bool) {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil || cookie.Value == "" {
+		return sessionClaims{}, false
+	}
+	claims, err := verifySession(cookie.Value)
+	if err != nil || claims.Exp < time.Now().Unix() || normalizeEmail(claims.Email) == "" {
+		return sessionClaims{}, false
+	}
+	return claims, true
+}
+
+func signSession(claims sessionClaims) (string, error) {
+	payload, err := json.Marshal(claims)
+	if err != nil {
+		return "", err
+	}
+	encodedPayload := base64.RawURLEncoding.EncodeToString(payload)
+	signature := signValue(encodedPayload)
+	return encodedPayload + "." + signature, nil
+}
+
+func verifySession(token string) (sessionClaims, error) {
+	parts := strings.Split(token, ".")
+	if len(parts) != 2 {
+		return sessionClaims{}, errors.New("invalid token")
+	}
+	expected := signValue(parts[0])
+	if subtle.ConstantTimeCompare([]byte(expected), []byte(parts[1])) != 1 {
+		return sessionClaims{}, errors.New("invalid signature")
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[0])
+	if err != nil {
+		return sessionClaims{}, err
+	}
+	var claims sessionClaims
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return sessionClaims{}, err
+	}
+	return claims, nil
+}
+
+func signValue(value string) string {
+	mac := hmac.New(sha256.New, []byte(sessionSecret()))
+	mac.Write([]byte(value))
+	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+}
+
+func sessionSecret() string {
+	if secret := os.Getenv("SESSION_SECRET"); secret != "" {
+		return secret
+	}
+	if secret := os.Getenv("JWT_SECRET"); secret != "" {
+		return secret
+	}
+	secretOnce.Do(func() {
+		buf := make([]byte, 32)
+		if _, err := rand.Read(buf); err != nil {
+			log.Printf("session secret fallback random error: %v", err)
+			secretKey = "temporary-dev-session-secret"
+			return
+		}
+		secretKey = base64.RawURLEncoding.EncodeToString(buf)
+		log.Print("SESSION_SECRET/JWT_SECRET not set; generated temporary session secret for this process")
+	})
+	return secretKey
+}
+
+func isSecureRequest(r *http.Request) bool {
+	return r.TLS != nil || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
+}
+
+func isPaidEmail(email string) bool {
+	email = normalizeEmail(email)
+	if email == "" {
+		return false
+	}
+	if envPaidEmail(email) {
+		return true
+	}
+	if appDB == nil {
+		paidMu.RLock()
+		_, ok := paidEmails[email]
+		paidMu.RUnlock()
+		return ok
+	}
+	var paid int
+	err := appDB.QueryRow(`SELECT paid FROM licenses WHERE email = ?`, email).Scan(&paid)
+	if err != nil {
+		return false
+	}
+	return paid == 1
+}
+
+func envPaidEmail(email string) bool {
+	for _, raw := range strings.Split(os.Getenv("PAID_EMAILS"), ",") {
+		if normalizeEmail(raw) == email {
+			return true
+		}
+	}
+	return false
+}
+
+func setLicense(email, eventType, resourceID string, paid bool) {
+	email = normalizeEmail(email)
+	if email == "" || appDB == nil {
+		return
+	}
+	paidValue := 0
+	if paid {
+		paidValue = 1
+	}
+	_, err := appDB.Exec(
+		`INSERT INTO licenses (email, paid, source, event_type, resource_id, updated_at)
+		 VALUES (?, ?, 'paypal', ?, ?, ?)
+		 ON CONFLICT(email) DO UPDATE SET
+		 paid = excluded.paid,
+		 source = excluded.source,
+		 event_type = excluded.event_type,
+		 resource_id = excluded.resource_id,
+		 updated_at = excluded.updated_at`,
+		email,
+		paidValue,
+		eventType,
+		resourceID,
+		time.Now().UTC().Format(time.RFC3339),
+	)
+	if err != nil {
+		log.Printf("license upsert error email=%q event=%q: %v", email, eventType, err)
+	}
 }
 
 func handlePayPalWebhook(w http.ResponseWriter, r *http.Request) {
@@ -97,16 +584,27 @@ func handlePayPalWebhook(w http.ResponseWriter, r *http.Request) {
 	eventType, _ := payload["event_type"].(string)
 	resourceID := findResourceID(payload)
 	emails := extractEmails(payload)
+	grantPaid := eventType == "PAYMENT.CAPTURE.COMPLETED"
+	revokePaid := eventType == "PAYMENT.CAPTURE.REFUNDED" || eventType == "PAYMENT.CAPTURE.REVERSED" || eventType == "PAYMENT.CAPTURE.DENIED"
 
 	for _, email := range emails {
-		paidMu.Lock()
-		paidEmails[email] = paidRecord{
-			Email:      email,
-			EventType:  eventType,
-			ResourceID: resourceID,
-			ReceivedAt: time.Now().UTC(),
+		if grantPaid {
+			paidMu.Lock()
+			paidEmails[email] = paidRecord{
+				Email:      email,
+				EventType:  eventType,
+				ResourceID: resourceID,
+				ReceivedAt: time.Now().UTC(),
+			}
+			paidMu.Unlock()
+			setLicense(email, eventType, resourceID, true)
 		}
-		paidMu.Unlock()
+		if revokePaid {
+			paidMu.Lock()
+			delete(paidEmails, email)
+			paidMu.Unlock()
+			setLicense(email, eventType, resourceID, false)
+		}
 	}
 
 	log.Printf(
@@ -126,6 +624,7 @@ func handlePayPalWebhook(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	if err := json.NewEncoder(w).Encode(value); err != nil {
 		log.Printf("json response error: %v", err)
@@ -395,11 +894,29 @@ h1 em{color:var(--accent);font-style:normal}
 .header{animation:up .5s ease both}
 .card{animation:up .5s ease .08s both}
 .features{animation:up .5s ease .16s both}
+.account-bar{display:flex;justify-content:flex-end;margin-bottom:20px}
+.account-pill{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:999px;color:var(--text);padding:8px 12px;font-size:12px;font-weight:800;cursor:pointer;max-width:100%;transition:all .15s}
+.account-pill:hover{border-color:rgba(212,255,87,0.35);color:var(--accent);background:var(--accent-dim)}
+.account-pill.pro{border-color:rgba(212,255,87,0.35);color:var(--accent)}
+.account-email{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.auth-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:6px;margin-bottom:18px}
+.auth-switch button{border:0;background:transparent;color:var(--muted);border-radius:8px;padding:10px;font-size:13px;font-weight:800;cursor:pointer}
+.auth-switch button.on{background:var(--accent);color:#0e0e11}
+.auth-form{display:grid;gap:10px;text-align:left}
+.auth-input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:13px 14px;font:inherit;outline:none}
+.auth-input:focus{border-color:var(--accent)}
+.auth-hint{font-size:12px;color:var(--muted);line-height:1.55;text-align:left;margin-top:12px}
+.auth-msg{min-height:18px;font-size:12px;color:var(--muted);text-align:left}
+.auth-msg.err{color:var(--danger)}
+.auth-msg.ok{color:var(--success)}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="header">
+    <div class="account-bar">
+      <button class="account-pill" id="accountPill" onclick="showAuthModal()">登录 / 注册</button>
+    </div>
     <div class="badge"><span class="badge-dot"></span>Browser Tool Suite</div>
     <h1>免费在线工具集<br><em>图片、创作与数据处理</em></h1>
     <p class="desc">压缩图片、转换格式、调整尺寸，并逐步加入二维码、社交媒体卡片、CSV转JSON和Markdown转PDF。核心处理在浏览器本地完成，尽量不占服务器算力。</p>
@@ -811,7 +1328,29 @@ Bob,bob@example.com,pro</textarea>
       <div class="modal-feature">一次付费，解锁工具包</div>
     </div>
     <button class="btn pay" onclick="goPay()">使用 PayPal 解锁 $10 →</button>
+    <div class="auth-hint">已经付款？用付款时的 PayPal 邮箱登录或注册，系统会自动识别 Pro 状态。</div>
+    <button class="quota-unlock" style="margin-top:14px" onclick="showAuthModal()">登录 / 注册激活</button>
     <div class="modal-close" onclick="closeModal()">暂时不需要</div>
+  </div>
+</div>
+
+<!-- Auth Modal -->
+<div class="overlay" id="authOverlay">
+  <div class="modal">
+    <div class="modal-title" id="authTitle">登录</div>
+    <div class="modal-desc">只用邮箱和密码，服务器只负责账号与 Pro 状态。</div>
+    <div class="auth-switch">
+      <button id="authLoginTab" class="on" onclick="setAuthMode('login')">登录</button>
+      <button id="authRegisterTab" onclick="setAuthMode('register')">注册</button>
+    </div>
+    <div class="auth-form">
+      <input class="auth-input" id="authEmail" type="email" autocomplete="email" placeholder="PayPal 邮箱">
+      <input class="auth-input" id="authPassword" type="password" autocomplete="current-password" placeholder="密码，至少 8 位">
+      <button class="btn" id="authSubmit" onclick="submitAuth()">继续</button>
+      <div class="auth-msg" id="authMsg"></div>
+    </div>
+    <div class="auth-hint">付款后请使用 PayPal 付款邮箱登录。没有付款也可以先注册，免费工具照常使用。</div>
+    <div class="modal-close" onclick="closeAuthModal()">关闭</div>
   </div>
 </div>
 
@@ -822,6 +1361,8 @@ const PAYPAL_PAYMENT_LINK = 'https://www.paypal.com/ncp/payment/LN55VSJYNE252';
 
 let f = null;
 let usedCount = parseInt(localStorage.getItem(STORAGE_KEY) || '0');
+let account = { authenticated: false, paid: false, email: '' };
+let authMode = 'login';
 let activeTool = 'compress';
 let outputType = 'image/jpeg';
 let outputLabel = 'JPG';
@@ -844,6 +1385,7 @@ const resizeControls = document.getElementById('resizeControls');
 const resizeW = document.getElementById('resizeW');
 const resizeH = document.getElementById('resizeH');
 
+initAccount();
 updateQuota();
 
 dz.onclick = () => fi.click();
@@ -955,6 +1497,13 @@ function setResizeMode(mode, el) {
 }
 
 function updateQuota() {
+  if (isPaid()) {
+    document.getElementById('quotaText').textContent = 'PRO';
+    const fill = document.getElementById('quotaFill');
+    fill.style.width = '100%';
+    fill.className = 'quota-fill';
+    return;
+  }
   const remaining = Math.max(0, FREE_LIMIT - usedCount);
   const pct = (remaining / FREE_LIMIT) * 100;
   document.getElementById('quotaText').textContent = remaining + ' / ' + FREE_LIMIT;
@@ -967,7 +1516,7 @@ async function compress() {
   if (!f) return;
 
   // 检查免费次数
-  if (usedCount >= FREE_LIMIT) {
+  if (!isPaid() && usedCount >= FREE_LIMIT) {
     showPaywall();
     return;
   }
@@ -997,9 +1546,11 @@ async function compress() {
     URL.revokeObjectURL(url);
 
     // 记录次数
-    usedCount++;
-    localStorage.setItem(STORAGE_KEY, usedCount);
-    updateQuota();
+    if (!isPaid()) {
+      usedCount++;
+      localStorage.setItem(STORAGE_KEY, usedCount);
+      updateQuota();
+    }
 
     showStatus('ok', origKB + ' KB → ' + resultKB + ' KB · 减少 ' + saved + '% · 已自动下载');
     psize.textContent = '原始：' + origKB + ' KB → 压缩后：' + resultKB + ' KB';
@@ -1431,6 +1982,136 @@ function showPaywall() {
 
 function closeModal() {
   document.getElementById('overlay').classList.remove('show');
+}
+
+function isPaid() {
+  return account && account.paid === true;
+}
+
+async function initAccount() {
+  try {
+    const res = await fetch('/api/me', { credentials: 'same-origin' });
+    const data = await res.json();
+    if (data && data.ok) {
+      account = {
+        authenticated: data.authenticated === true,
+        paid: data.paid === true,
+        email: data.email || ''
+      };
+      renderAccount();
+      updateQuota();
+    }
+  } catch (e) {
+    renderAccount();
+  }
+}
+
+function renderAccount() {
+  const pill = document.getElementById('accountPill');
+  if (!pill) return;
+  if (!account.authenticated) {
+    pill.className = 'account-pill';
+    pill.innerHTML = '登录 / 注册';
+    pill.onclick = showAuthModal;
+    return;
+  }
+  pill.className = 'account-pill' + (account.paid ? ' pro' : '');
+  pill.innerHTML = '<span class="account-email">' + escapeHTML(account.email) + '</span><span>' + (account.paid ? 'PRO' : 'FREE') + '</span>';
+  pill.onclick = showAccountMenu;
+}
+
+function showAccountMenu() {
+  if (!account.authenticated) {
+    showAuthModal();
+    return;
+  }
+  const action = confirm((account.paid ? 'Pro 已激活' : '当前是免费账号') + '\n\n点击确定退出登录，取消保留登录。');
+  if (action) logout();
+}
+
+function showAuthModal(mode) {
+  closeModal();
+  setAuthMode(mode || authMode || 'login');
+  document.getElementById('authOverlay').classList.add('show');
+  setTimeout(() => document.getElementById('authEmail').focus(), 50);
+}
+
+function closeAuthModal() {
+  document.getElementById('authOverlay').classList.remove('show');
+}
+
+function setAuthMode(mode) {
+  authMode = mode === 'register' ? 'register' : 'login';
+  document.getElementById('authTitle').textContent = authMode === 'register' ? '注册' : '登录';
+  document.getElementById('authLoginTab').classList.toggle('on', authMode === 'login');
+  document.getElementById('authRegisterTab').classList.toggle('on', authMode === 'register');
+  document.getElementById('authSubmit').textContent = authMode === 'register' ? '注册并登录' : '登录';
+  document.getElementById('authMsg').textContent = '';
+  document.getElementById('authMsg').className = 'auth-msg';
+}
+
+async function submitAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const msg = document.getElementById('authMsg');
+  const submit = document.getElementById('authSubmit');
+  msg.className = 'auth-msg';
+  msg.textContent = '';
+  if (!email || !email.includes('@')) {
+    msg.className = 'auth-msg err';
+    msg.textContent = '请输入有效邮箱。';
+    return;
+  }
+  if (password.length < 8) {
+    msg.className = 'auth-msg err';
+    msg.textContent = '密码至少 8 位。';
+    return;
+  }
+  submit.disabled = true;
+  submit.textContent = '处理中...';
+  try {
+    const res = await fetch('/api/' + authMode, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) {
+      msg.className = 'auth-msg err';
+      msg.textContent = authErrorText(data.error);
+      return;
+    }
+    account = { authenticated: true, paid: data.paid === true, email: data.email || email };
+    renderAccount();
+    updateQuota();
+    msg.className = 'auth-msg ok';
+    msg.textContent = account.paid ? '已登录，Pro 已激活。' : '已登录，当前是免费账号。';
+    setTimeout(closeAuthModal, 700);
+  } catch (e) {
+    msg.className = 'auth-msg err';
+    msg.textContent = '网络异常，请稍后重试。';
+  } finally {
+    submit.disabled = false;
+    submit.textContent = authMode === 'register' ? '注册并登录' : '登录';
+  }
+}
+
+function authErrorText(code) {
+  if (code === 'email_exists') return '这个邮箱已经注册，请切换到登录。';
+  if (code === 'weak_password') return '密码至少 8 位。';
+  if (code === 'invalid_credentials') return '邮箱或密码不正确。';
+  if (code === 'invalid_email') return '邮箱格式不正确。';
+  return '操作失败，请稍后重试。';
+}
+
+async function logout() {
+  try {
+    await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+  } catch (e) {}
+  account = { authenticated: false, paid: false, email: '' };
+  renderAccount();
+  updateQuota();
 }
 
 function goPay() {
