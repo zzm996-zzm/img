@@ -15,9 +15,9 @@ func main() {
 	})
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8081"
+		port = "8080"
 	}
-	log.Printf("Server running at http://localhost:%s", port)
+	log.Printf("Server running on 0.0.0.0:%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
 
