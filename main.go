@@ -13,12 +13,29 @@ func main() {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte("google-site-verification: google6409d0c57bc30ecb.html"))
 	})
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	log.Printf("Server running on 0.0.0.0:%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+
+	for _, fallbackPort := range []string{"8080", "8081"} {
+		if fallbackPort == port {
+			continue
+		}
+		go listenAndServe(mux, fallbackPort, false)
+	}
+
+	listenAndServe(mux, port, true)
+}
+
+func listenAndServe(handler http.Handler, port string, fatal bool) {
+	log.Printf("Server listening on 0.0.0.0:%s", port)
+	err := http.ListenAndServe(":"+port, handler)
+	if fatal {
+		log.Fatal(err)
+	}
+	log.Printf("Could not listen on fallback port %s: %v", port, err)
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
