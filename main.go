@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
@@ -12,7 +13,10 @@ func main() {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte("google-site-verification: google6409d0c57bc30ecb.html"))
 	})
-	port := "8081"
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8081"
+	}
 	log.Printf("Server running at http://localhost:%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, mux))
 }
@@ -56,6 +60,8 @@ h1 em{color:var(--accent);font-style:normal}
 .quota-track{flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
 .quota-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s}
 .quota-fill.low{background:var(--danger)}
+.quota-unlock{background:transparent;border:1px solid rgba(212,255,87,0.35);color:var(--accent);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.quota-unlock:hover{background:var(--accent-dim)}
 
 .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px;margin-bottom:20px}
 .drop-zone{border:1.5px dashed rgba(255,255,255,0.12);border-radius:14px;padding:52px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2);margin-bottom:24px}
@@ -150,6 +156,7 @@ h1 em{color:var(--accent);font-style:normal}
   <div class="quota-bar" id="quotaBar">
     <div class="quota-left">免费次数：<strong id="quotaText">100 / 100</strong></div>
     <div class="quota-track"><div class="quota-fill" id="quotaFill" style="width:100%"></div></div>
+    <button class="quota-unlock" onclick="showPaywall()">PayPal 解锁</button>
   </div>
 
   <div class="card">
@@ -239,7 +246,7 @@ h1 em{color:var(--accent);font-style:normal}
       <div class="modal-feature">浏览器本地处理，完全私密</div>
       <div class="modal-feature">支持 JPG / PNG / WebP</div>
     </div>
-    <button class="btn pay" onclick="goPay()">立即解锁 $10 →</button>
+    <button class="btn pay" onclick="goPay()">使用 PayPal 解锁 $10 →</button>
     <div class="modal-close" onclick="closeModal()">暂时不需要</div>
   </div>
 </div>
@@ -247,6 +254,7 @@ h1 em{color:var(--accent);font-style:normal}
 <script>
 const FREE_LIMIT = 100;
 const STORAGE_KEY = 'img_compress_count';
+const PAYPAL_PAYMENT_LINK = 'https://www.paypal.com/ncp/payment/LN55VSJYNE252';
 
 let f = null;
 let usedCount = parseInt(localStorage.getItem(STORAGE_KEY) || '0');
@@ -413,8 +421,7 @@ function closeModal() {
 }
 
 function goPay() {
-  // 跳转到支付页面，后续接入 Lemon Squeezy
-  alert('支付功能即将上线，敬请期待！');
+  window.location.href = PAYPAL_PAYMENT_LINK;
 }
 
 function showStatus(type, msg) {
