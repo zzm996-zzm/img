@@ -17,6 +17,10 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleIndex)
 	mux.HandleFunc("/compress", handleCompress)
+	mux.HandleFunc("/google6409d0c57bc30ecb.html", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte("google-site-verification: google6409d0c57bc30ecb.html"))
+	})
 	port := "8081"
 	log.Printf("Server running at http://localhost:%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, mux))
