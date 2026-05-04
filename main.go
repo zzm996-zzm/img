@@ -1,14 +1,33 @@
 package main
 
 import (
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"os"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+)
+
+type paidRecord struct {
+	Email      string    `json:"email"`
+	EventType  string    `json:"event_type"`
+	ResourceID string    `json:"resource_id,omitempty"`
+	ReceivedAt time.Time `json:"received_at"`
+}
+
+var (
+	paidMu     sync.RWMutex
+	paidEmails = map[string]paidRecord{}
 )
 
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleIndex)
+	mux.HandleFunc("/api/paypal-webhook", handlePayPalWebhook)
 	mux.HandleFunc("/google6409d0c57bc30ecb.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte("google-site-verification: google6409d0c57bc30ecb.html"))
@@ -41,6 +60,150 @@ func listenAndServe(handler http.Handler, port string, fatal bool) {
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(indexHTML))
+}
+
+func handlePayPalWebhook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	if r.Method == http.MethodGet {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"ok":      true,
+			"message": "paypal webhook endpoint ready",
+			"path":    "/api/paypal-webhook",
+		})
+		return
+	}
+
+	if r.Method != http.MethodPost {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]any{"ok": false, "error": "method_not_allowed"})
+		return
+	}
+
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 1<<20))
+	if err != nil {
+		log.Printf("paypal webhook read error: %v", err)
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid_body"})
+		return
+	}
+	defer r.Body.Close()
+
+	var payload map[string]any
+	if err := json.Unmarshal(body, &payload); err != nil {
+		log.Printf("paypal webhook invalid json: %v body=%s", err, truncateForLog(string(body), 1200))
+		writeJSON(w, http.StatusBadRequest, map[string]any{"ok": false, "error": "invalid_json"})
+		return
+	}
+
+	eventType, _ := payload["event_type"].(string)
+	resourceID := findResourceID(payload)
+	emails := extractEmails(payload)
+
+	for _, email := range emails {
+		paidMu.Lock()
+		paidEmails[email] = paidRecord{
+			Email:      email,
+			EventType:  eventType,
+			ResourceID: resourceID,
+			ReceivedAt: time.Now().UTC(),
+		}
+		paidMu.Unlock()
+	}
+
+	log.Printf(
+		"paypal webhook received event=%q resource_id=%q emails=%v transmission_id=%q",
+		eventType,
+		resourceID,
+		emails,
+		r.Header.Get("Paypal-Transmission-Id"),
+	)
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"ok":          true,
+		"event_type":  eventType,
+		"resource_id": resourceID,
+		"emails":      emails,
+	})
+}
+
+func writeJSON(w http.ResponseWriter, status int, value any) {
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(value); err != nil {
+		log.Printf("json response error: %v", err)
+	}
+}
+
+func extractEmails(value any) []string {
+	seen := map[string]bool{}
+	var emails []string
+
+	var walk func(any)
+	walk = func(v any) {
+		switch typed := v.(type) {
+		case map[string]any:
+			for key, item := range typed {
+				if strings.Contains(strings.ToLower(key), "email") {
+					if raw, ok := item.(string); ok {
+						if email := normalizeEmail(raw); email != "" && !seen[email] {
+							seen[email] = true
+							emails = append(emails, email)
+						}
+					}
+				}
+				walk(item)
+			}
+		case []any:
+			for _, item := range typed {
+				walk(item)
+			}
+		}
+	}
+
+	walk(value)
+	sort.Strings(emails)
+	return emails
+}
+
+func normalizeEmail(value string) string {
+	email := strings.ToLower(strings.TrimSpace(value))
+	if !strings.Contains(email, "@") || strings.ContainsAny(email, " \t\r\n") {
+		return ""
+	}
+	return email
+}
+
+func findResourceID(payload map[string]any) string {
+	if resource, ok := payload["resource"]; ok {
+		return findStringByKey(resource, "id")
+	}
+	return findStringByKey(payload, "id")
+}
+
+func findStringByKey(value any, key string) string {
+	switch typed := value.(type) {
+	case map[string]any:
+		if raw, ok := typed[key].(string); ok {
+			return raw
+		}
+		for _, item := range typed {
+			if found := findStringByKey(item, key); found != "" {
+				return found
+			}
+		}
+	case []any:
+		for _, item := range typed {
+			if found := findStringByKey(item, key); found != "" {
+				return found
+			}
+		}
+	}
+	return ""
+}
+
+func truncateForLog(value string, limit int) string {
+	if len(value) <= limit {
+		return value
+	}
+	return value[:limit] + "...(truncated)"
 }
 
 const indexHTML = `<!DOCTYPE html>
