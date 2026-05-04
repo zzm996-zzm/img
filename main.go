@@ -48,10 +48,11 @@ const indexHTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>图片压缩与格式转换 — 精确压缩到指定大小 | 免费在线工具</title>
-<meta name="description" content="免费在线图片压缩和格式转换，精确压缩到你指定的KB大小，支持JPG/PNG/WebP互转。图片不上传服务器，完全在浏览器本地处理。">
+<title>免费在线工具集 | 图片压缩、格式转换、尺寸转换、二维码与数据工具</title>
+<meta name="description" content="免费在线浏览器工具集，支持图片压缩、格式转换、尺寸转换、批量压缩、背景移除、二维码生成、社交媒体卡片、CSV转JSON和Markdown转PDF。核心处理在浏览器本地完成。">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1902780696242483" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -81,12 +82,13 @@ h1 em{color:var(--accent);font-style:normal}
 .quota-unlock:hover{background:var(--accent-dim)}
 
 .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px;margin-bottom:20px}
-.tool-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:6px;margin-bottom:24px}
+.tool-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:6px;margin-bottom:24px}
 .tool-tab{border:0;background:transparent;color:var(--muted);border-radius:8px;padding:11px 8px;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap}
 .tool-tab:hover{color:var(--text);background:rgba(255,255,255,0.04)}
 .tool-tab.on{background:var(--accent);color:#0e0e11}
 .tool-tab .pro{display:inline-block;margin-left:5px;font-size:10px;color:inherit;opacity:.72}
 .tool-box.hidden,.tool-controls.hidden{display:none}
+@media(max-width:620px){.tool-tabs{grid-template-columns:repeat(2,1fr)}}
 .drop-zone{border:1.5px dashed rgba(255,255,255,0.12);border-radius:14px;padding:52px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2);margin-bottom:24px}
 .drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:var(--accent-dim)}
 .drop-zone.over{transform:scale(1.01)}
@@ -116,6 +118,14 @@ h1 em{color:var(--accent);font-style:normal}
 .format-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:28px}
 .format-option{padding:13px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
 .format-option:hover,.format-option.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.dimension-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.dim-input{width:100%;background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;font-size:20px;font-family:'Syne',sans-serif;font-weight:700;color:var(--text);outline:none;-moz-appearance:textfield}
+.dim-input::-webkit-outer-spin-button,.dim-input::-webkit-inner-spin-button{-webkit-appearance:none}
+.dim-input:focus{border-color:var(--accent)}
+.resize-presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.resize-preset{padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.resize-preset:hover,.resize-preset.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.mode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:28px}
 .pro-panel{display:none;background:var(--surface2);border:1px solid rgba(212,255,87,0.24);border-radius:14px;padding:28px;text-align:left}
 .pro-panel.show{display:block}
 .pro-kicker{display:inline-flex;align-items:center;background:var(--accent-dim);border:1px solid rgba(212,255,87,0.25);color:var(--accent);border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800;margin-bottom:16px}
@@ -157,12 +167,58 @@ h1 em{color:var(--accent);font-style:normal}
 .modal-close{margin-top:16px;font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline}
 .modal-close:hover{color:var(--text)}
 
-.features{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.features{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:650px){.features{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:500px){.features{grid-template-columns:1fr}}
 .feat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px}
 .feat-icon{font-size:20px;margin-bottom:10px}
 .feat-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:4px}
 .feat-desc{font-size:12px;color:var(--muted);line-height:1.55}
+.section{margin-top:52px}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-bottom:18px}
+.section-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;letter-spacing:-.01em}
+.section-desc{font-size:13px;color:var(--muted);line-height:1.6;max-width:360px}
+.tool-matrix{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:720px){.tool-matrix{grid-template-columns:1fr}.section-head{display:block}.section-desc{margin-top:8px}}
+.tool-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;min-height:156px;display:flex;flex-direction:column;gap:10px}
+.tool-card.pro{border-color:rgba(212,255,87,0.28)}
+.tool-card.coming{opacity:.78}
+.tool-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.tool-icon{font-size:22px}
+.tool-tag{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(212,255,87,0.2);border-radius:999px;padding:4px 8px;white-space:nowrap}
+.tool-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:800}
+.tool-copy{font-size:12px;color:var(--muted);line-height:1.55;flex:1}
+.tool-action{align-self:flex-start;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:8px;padding:8px 11px;font-size:12px;font-weight:800;cursor:pointer;transition:all .15s}
+.tool-action:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.pro-strip{background:linear-gradient(135deg,rgba(212,255,87,0.13),rgba(255,255,255,0.03));border:1px solid rgba(212,255,87,0.25);border-radius:18px;padding:28px;margin-top:52px}
+.pro-strip-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:8px}
+.pro-strip-copy{color:var(--muted);font-size:14px;line-height:1.65;margin-bottom:18px;max-width:560px}
+.pro-points{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:620px){.pro-points{grid-template-columns:1fr}}
+.pro-point{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;padding:11px 12px;font-size:12px;color:var(--text);font-weight:700}
+.utility-lab{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;margin-top:52px}
+.utility-tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.utility-tab{background:var(--surface2);border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:9px 12px;font-size:12px;font-weight:800;cursor:pointer;transition:all .15s}
+.utility-tab:hover,.utility-tab.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.utility-panel{display:none}
+.utility-panel.show{display:block}
+.utility-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+@media(max-width:720px){.utility-grid{grid-template-columns:1fr}}
+.utility-field{display:grid;gap:8px;margin-bottom:12px}
+.utility-label{font-size:11px;color:var(--muted);font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.utility-input,.utility-textarea,.utility-select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:12px 13px;font:inherit;outline:none}
+.utility-input:focus,.utility-textarea:focus,.utility-select:focus{border-color:var(--accent)}
+.utility-textarea{min-height:150px;resize:vertical;line-height:1.55}
+.utility-output{background:var(--surface2);border:1px solid var(--border);border-radius:12px;min-height:180px;padding:16px;overflow:auto}
+.qr-box{display:flex;align-items:center;justify-content:center;min-height:240px}
+.gradient-preview{height:190px;border-radius:12px;border:1px solid var(--border);margin-bottom:12px}
+.swatch-row{display:flex;gap:8px;flex-wrap:wrap}
+.swatch{height:34px;min-width:86px;border-radius:8px;border:1px solid var(--border)}
+.social-canvas{width:100%;max-width:420px;border:1px solid var(--border);border-radius:12px;background:#111}
+.json-output{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.55}
+.markdown-preview h1,.markdown-preview h2,.markdown-preview h3{font-family:'Syne',sans-serif;margin:0 0 10px}
+.markdown-preview p,.markdown-preview li{color:var(--text);line-height:1.65;margin-bottom:8px}
+.markdown-preview code{background:rgba(255,255,255,0.08);border-radius:5px;padding:2px 5px}
 .faq{margin-top:48px}
 .faq-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:24px;letter-spacing:-.01em}
 .faq-item{border-bottom:1px solid var(--border);padding:20px 0;cursor:pointer}
@@ -181,9 +237,9 @@ h1 em{color:var(--accent);font-style:normal}
 <body>
 <div class="wrap">
   <div class="header">
-    <div class="badge"><span class="badge-dot"></span>免费工具</div>
-    <h1>图片压缩<br><em>精确到你要的大小</em></h1>
-    <p class="desc">填一个目标KB数，在你的浏览器本地完成压缩。图片不上传服务器，完全私密。</p>
+    <div class="badge"><span class="badge-dot"></span>Browser Tool Suite</div>
+    <h1>免费在线工具集<br><em>图片、创作与数据处理</em></h1>
+    <p class="desc">压缩图片、转换格式、调整尺寸，并逐步加入二维码、社交媒体卡片、CSV转JSON和Markdown转PDF。核心处理在浏览器本地完成，尽量不占服务器算力。</p>
   </div>
 
   <!-- 免费次数进度条 -->
@@ -197,6 +253,7 @@ h1 em{color:var(--accent);font-style:normal}
     <div class="tool-tabs">
       <button class="tool-tab on" id="tab-compress" onclick="switchTool('compress')">单张压缩</button>
       <button class="tool-tab" id="tab-convert" onclick="switchTool('convert')">格式转换</button>
+      <button class="tool-tab" id="tab-resize" onclick="switchTool('resize')">尺寸转换</button>
       <button class="tool-tab" id="tab-batch" onclick="switchTool('batch')">批量压缩 <span class="pro">PRO</span></button>
     </div>
 
@@ -241,6 +298,27 @@ h1 em{color:var(--accent);font-style:normal}
         </div>
       </div>
 
+      <div class="tool-controls hidden" id="resizeControls">
+        <div class="field-label">输出尺寸</div>
+        <div class="dimension-grid">
+          <input class="dim-input" type="number" id="resizeW" value="200" min="1" max="12000" aria-label="宽度">
+          <input class="dim-input" type="number" id="resizeH" value="200" min="1" max="12000" aria-label="高度">
+        </div>
+        <div class="resize-presets">
+          <button class="resize-preset on" onclick="setResizePreset(200, 200)">200x200</button>
+          <button class="resize-preset" onclick="setResizePreset(300, 300)">300x300</button>
+          <button class="resize-preset" onclick="setResizePreset(512, 512)">512x512</button>
+          <button class="resize-preset" onclick="setResizePreset(1080, 1080)">1080x1080</button>
+          <button class="resize-preset" onclick="setResizePreset(1920, 1080)">1920x1080</button>
+        </div>
+        <div class="field-label">适配方式</div>
+        <div class="mode-grid">
+          <button class="format-option on" onclick="setResizeMode('contain', this)">留白适配</button>
+          <button class="format-option" onclick="setResizeMode('cover', this)">裁剪填满</button>
+          <button class="format-option" onclick="setResizeMode('stretch', this)">拉伸</button>
+        </div>
+      </div>
+
       <button class="btn" id="btn" onclick="runTool()" disabled>选择图片后开始</button>
       <div class="status" id="st"></div>
     </div>
@@ -261,8 +339,250 @@ h1 em{color:var(--accent);font-style:normal}
   <div class="features">
     <div class="feat"><div class="feat-icon">⚡</div><div class="feat-title">浏览器本地处理</div><div class="feat-desc">图片不上传服务器，速度快，完全私密</div></div>
     <div class="feat"><div class="feat-icon">🎯</div><div class="feat-title">精确压缩</div><div class="feat-desc">二分法算法，紧贴目标大小，不会超限</div></div>
+    <div class="feat"><div class="feat-icon">📐</div><div class="feat-title">尺寸转换</div><div class="feat-desc">快速生成200x200、头像和平台上传尺寸</div></div>
     <div class="feat"><div class="feat-icon">🆓</div><div class="feat-title">免费格式转换</div><div class="feat-desc">JPG、PNG、WebP互转，免费使用</div></div>
   </div>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-title">Image Tools</div>
+      <p class="section-desc">围绕上传限制、头像尺寸、电商素材和批量处理设计，免费工具引流，Pro 工具节省重复操作。</p>
+    </div>
+    <div class="tool-matrix">
+      <div class="tool-card">
+        <div class="tool-top"><span class="tool-icon">🎯</span><span class="tool-tag">FREE</span></div>
+        <div class="tool-name">图片压缩到指定KB</div>
+        <div class="tool-copy">把 JPG、PNG、WebP 压缩到 200KB、500KB、1MB 等目标大小，适合表单、招聘网站和证件材料上传。</div>
+        <button class="tool-action" onclick="jumpTool('compress')">开始压缩</button>
+      </div>
+      <div class="tool-card">
+        <div class="tool-top"><span class="tool-icon">🔁</span><span class="tool-tag">FREE</span></div>
+        <div class="tool-name">图片格式转换</div>
+        <div class="tool-copy">免费将图片转换为 JPG、PNG 或 WebP，全部在浏览器中完成，不需要上传服务器。</div>
+        <button class="tool-action" onclick="jumpTool('convert')">转换格式</button>
+      </div>
+      <div class="tool-card">
+        <div class="tool-top"><span class="tool-icon">📐</span><span class="tool-tag">FREE</span></div>
+        <div class="tool-name">图片尺寸转换</div>
+        <div class="tool-copy">自定义宽高，支持留白适配、裁剪填满和拉伸，快速生成头像、社媒和平台上传尺寸。</div>
+        <button class="tool-action" onclick="jumpTool('resize')">调整尺寸</button>
+      </div>
+      <div class="tool-card pro">
+        <div class="tool-top"><span class="tool-icon">📦</span><span class="tool-tag">PRO</span></div>
+        <div class="tool-name">批量图片压缩</div>
+        <div class="tool-copy">一次处理多张图片，统一压缩设置，适合电商图、资料图和社媒素材批处理。</div>
+        <button class="tool-action" onclick="jumpTool('batch')">解锁批量</button>
+      </div>
+      <div class="tool-card pro coming">
+        <div class="tool-top"><span class="tool-icon">✂️</span><span class="tool-tag">PRO SOON</span></div>
+        <div class="tool-name">背景移除</div>
+        <div class="tool-copy">面向头像、电商图和社媒配图，计划支持本地模型移除背景，Pro 输出高清无水印。</div>
+        <button class="tool-action" onclick="showPaywall()">查看 Pro</button>
+      </div>
+      <div class="tool-card pro coming">
+        <div class="tool-top"><span class="tool-icon">🧰</span><span class="tool-tag">PRO</span></div>
+        <div class="tool-name">批量尺寸与格式处理</div>
+        <div class="tool-copy">把批量压缩、尺寸转换和格式转换组合成一个流水线，后续作为 Pro 核心能力。</div>
+        <button class="tool-action" onclick="showPaywall()">解锁 Pro</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-title">Creator Tools</div>
+      <p class="section-desc">为运营、博主和小商家准备的轻量创作工具，基础功能免费，高级样式和高清导出进入 Pro。</p>
+    </div>
+    <div class="tool-matrix">
+      <div class="tool-card">
+        <div class="tool-top"><span class="tool-icon">▦</span><span class="tool-tag">FREE</span></div>
+        <div class="tool-name">二维码生成器</div>
+        <div class="tool-copy">生成基础二维码，可自定义前景色和背景色，适合链接、活动页和社媒运营。</div>
+        <button class="tool-action" onclick="openUtility('qr')">生成二维码</button>
+      </div>
+      <div class="tool-card">
+        <div class="tool-top"><span class="tool-icon">🖼</span><span class="tool-tag">FREE</span></div>
+        <div class="tool-name">社交媒体卡片制作</div>
+        <div class="tool-copy">输入标题和副标题，本地生成一张适合社媒分享的卡片图，后续 Pro 解锁更多模板。</div>
+        <button class="tool-action" onclick="openUtility('social')">制作卡片</button>
+      </div>
+      <div class="tool-card">
+        <div class="tool-top"><span class="tool-icon">🎨</span><span class="tool-tag">FREE</span></div>
+        <div class="tool-name">配色与渐变生成器</div>
+        <div class="tool-copy">随机生成配色和 CSS 渐变，快速复制到设计稿、落地页或社媒素材里。</div>
+        <button class="tool-action" onclick="openUtility('gradient')">生成配色</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="section-title">Data Tools</div>
+      <p class="section-desc">面向开发者、运营和数据整理场景，主打浏览器本地解析，减少上传敏感文件的顾虑。</p>
+    </div>
+    <div class="tool-matrix">
+      <div class="tool-card">
+        <div class="tool-top"><span class="tool-icon">{} </span><span class="tool-tag">FREE</span></div>
+        <div class="tool-name">CSV / Excel 转 JSON</div>
+        <div class="tool-copy">粘贴 CSV 内容，在浏览器本地转换成 JSON。Pro 方向是字段映射、批量文件和保存转换规则。</div>
+        <button class="tool-action" onclick="openUtility('csv')">转换 JSON</button>
+      </div>
+      <div class="tool-card">
+        <div class="tool-top"><span class="tool-icon">📄</span><span class="tool-tag">FREE</span></div>
+        <div class="tool-name">Markdown 导出 PDF</div>
+        <div class="tool-copy">把 Markdown 转成可打印预览，直接使用浏览器打印为 PDF。后续 Pro 支持高级模板。</div>
+        <button class="tool-action" onclick="openUtility('markdown')">打开编辑器</button>
+      </div>
+      <div class="tool-card pro coming">
+        <div class="tool-top"><span class="tool-icon">⚙️</span><span class="tool-tag">PRO SOON</span></div>
+        <div class="tool-name">批量数据转换规则</div>
+        <div class="tool-copy">为重复导入、清洗和转换任务保存规则，作为 Data Tools 的付费增强点。</div>
+        <button class="tool-action" onclick="showPaywall()">查看 Pro</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="utility-lab" id="utilityLab">
+    <div class="section-head">
+      <div class="section-title">Live Browser Tools</div>
+      <p class="section-desc">这些工具已经可以直接使用，处理过程在浏览器本地完成，适合作为 SEO 引流和 AdSense 展示入口。</p>
+    </div>
+    <div class="utility-tabs">
+      <button class="utility-tab on" id="util-tab-qr" onclick="openUtility('qr')">二维码</button>
+      <button class="utility-tab" id="util-tab-social" onclick="openUtility('social')">社交卡片</button>
+      <button class="utility-tab" id="util-tab-gradient" onclick="openUtility('gradient')">配色渐变</button>
+      <button class="utility-tab" id="util-tab-csv" onclick="openUtility('csv')">CSV转JSON</button>
+      <button class="utility-tab" id="util-tab-markdown" onclick="openUtility('markdown')">Markdown转PDF</button>
+    </div>
+
+    <div class="utility-panel show" id="util-qr">
+      <div class="utility-grid">
+        <div>
+          <div class="utility-field">
+            <label class="utility-label">二维码内容</label>
+            <textarea class="utility-textarea" id="qrText">https://img-production-b10c.up.railway.app</textarea>
+          </div>
+          <div class="dimension-grid">
+            <div class="utility-field">
+              <label class="utility-label">前景色</label>
+              <input class="utility-input" id="qrDark" type="color" value="#0e0e11">
+            </div>
+            <div class="utility-field">
+              <label class="utility-label">背景色</label>
+              <input class="utility-input" id="qrLight" type="color" value="#ffffff">
+            </div>
+          </div>
+          <button class="btn" onclick="generateQR()">生成二维码</button>
+          <button class="tool-action" onclick="downloadCanvas('qrCanvas', 'qrcode.png')">下载 PNG</button>
+        </div>
+        <div class="utility-output qr-box">
+          <canvas id="qrCanvas" width="260" height="260"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="utility-panel" id="util-social">
+      <div class="utility-grid">
+        <div>
+          <div class="utility-field">
+            <label class="utility-label">标题</label>
+            <input class="utility-input" id="cardTitle" value="Browser Tool Suite">
+          </div>
+          <div class="utility-field">
+            <label class="utility-label">副标题</label>
+            <input class="utility-input" id="cardSubtitle" value="Compress, convert, resize and create useful assets locally.">
+          </div>
+          <div class="dimension-grid">
+            <div class="utility-field">
+              <label class="utility-label">强调色</label>
+              <input class="utility-input" id="cardAccent" type="color" value="#d4ff57">
+            </div>
+            <div class="utility-field">
+              <label class="utility-label">版式</label>
+              <select class="utility-select" id="cardTemplate">
+                <option value="dark">Dark tool card</option>
+                <option value="light">Clean light card</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn" onclick="renderSocialCard()">生成并下载卡片</button>
+        </div>
+        <div class="utility-output">
+          <canvas class="social-canvas" id="socialCanvas" width="1200" height="630"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="utility-panel" id="util-gradient">
+      <div class="utility-grid">
+        <div>
+          <div class="utility-field">
+            <label class="utility-label">方向</label>
+            <select class="utility-select" id="gradientDirection">
+              <option value="135deg">Diagonal</option>
+              <option value="90deg">Horizontal</option>
+              <option value="180deg">Vertical</option>
+              <option value="45deg">Soft angle</option>
+            </select>
+          </div>
+          <button class="btn" onclick="generateGradient()">随机生成配色</button>
+        </div>
+        <div class="utility-output">
+          <div class="gradient-preview" id="gradientPreview"></div>
+          <div class="swatch-row" id="swatchRow"></div>
+          <pre class="json-output" id="gradientCode"></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="utility-panel" id="util-csv">
+      <div class="utility-grid">
+        <div>
+          <div class="utility-field">
+            <label class="utility-label">CSV内容</label>
+            <textarea class="utility-textarea" id="csvInput">name,email,plan
+Alice,alice@example.com,free
+Bob,bob@example.com,pro</textarea>
+          </div>
+          <button class="btn" onclick="convertCSV()">转换为 JSON</button>
+        </div>
+        <div class="utility-output">
+          <pre class="json-output" id="jsonOutput"></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="utility-panel" id="util-markdown">
+      <div class="utility-grid">
+        <div>
+          <div class="utility-field">
+            <label class="utility-label">Markdown</label>
+            <textarea class="utility-textarea" id="markdownInput"># Project Notes
+
+## Tools
+- Image compression
+- Format conversion
+- CSV to JSON
+
+**Export this page with browser print.**</textarea>
+          </div>
+          <button class="btn" onclick="renderMarkdown(true)">预览并打印PDF</button>
+        </div>
+        <div class="utility-output markdown-preview" id="markdownPreview"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pro-strip">
+    <div class="pro-strip-title">Unlock Pro Tools — $10 one-time</div>
+    <p class="pro-strip-copy">Pro 不是单独买一个按钮，而是解锁整个工具包里的高级能力：批量图片处理、背景移除、高清无水印导出、更多模板，以及未来新增的 Pro 工具。</p>
+    <div class="pro-points">
+      <div class="pro-point">Batch image compression</div>
+      <div class="pro-point">Background remover access</div>
+      <div class="pro-point">Future Pro tools included</div>
+    </div>
+    <button class="btn pay" onclick="showPaywall()">使用 PayPal 解锁 $10 →</button>
+  </section>
 
   <div class="faq">
     <div class="faq-title">常见问题</div>
@@ -294,6 +614,22 @@ h1 em{color:var(--accent);font-style:normal}
       <div class="faq-q">免费次数用完了怎么办？<span class="faq-arrow">+</span></div>
       <div class="faq-a">免费额度用完后，支付$10即可解锁无限次使用，一次付费永久有效，不收月费。</div>
     </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">这个网站只有图片压缩工具吗？<span class="faq-arrow">+</span></div>
+      <div class="faq-a">不止。现在已经支持图片压缩、格式转换和尺寸转换，后续会逐步加入批量图片处理、背景移除、二维码生成、社交媒体卡片、CSV转JSON和Markdown转PDF等浏览器本地工具。</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">尺寸转换支持自定义宽高吗？<span class="faq-arrow">+</span></div>
+      <div class="faq-a">支持。你可以输入任意宽度和高度，也可以使用200x200、300x300、512x512、1080x1080等预设。适配方式支持留白适配、裁剪填满和拉伸。</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">哪些功能是免费的，哪些是Pro？<span class="faq-arrow">+</span></div>
+      <div class="faq-a">单张图片压缩、格式转换和尺寸转换是免费入口。批量压缩、背景移除、批量尺寸和格式处理、高清无水印导出以及未来高级模板会放入Pro工具包。</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">CSV转JSON和Markdown转PDF会上传文件吗？<span class="faq-arrow">+</span></div>
+      <div class="faq-a">规划方向是浏览器本地解析和导出，尽量不把文件上传到服务器。这样既节省服务器成本，也更适合处理个人资料、运营表格和技术文档。</div>
+    </div>
   </div>
 </div>
 
@@ -307,9 +643,9 @@ h1 em{color:var(--accent);font-style:normal}
     <div class="modal-price-desc">一次付费 · 永久有效 · 无月费</div>
     <div class="modal-features">
       <div class="modal-feature">批量图片压缩</div>
-      <div class="modal-feature">无限次单张图片压缩</div>
-      <div class="modal-feature">浏览器本地处理，完全私密</div>
-      <div class="modal-feature">支持 JPG / PNG / WebP</div>
+      <div class="modal-feature">背景移除与未来Pro工具</div>
+      <div class="modal-feature">高清无水印导出</div>
+      <div class="modal-feature">一次付费，解锁工具包</div>
     </div>
     <button class="btn pay" onclick="goPay()">使用 PayPal 解锁 $10 →</button>
     <div class="modal-close" onclick="closeModal()">暂时不需要</div>
@@ -326,6 +662,7 @@ let usedCount = parseInt(localStorage.getItem(STORAGE_KEY) || '0');
 let activeTool = 'compress';
 let outputType = 'image/jpeg';
 let outputLabel = 'JPG';
+let resizeMode = 'contain';
 
 const dz = document.getElementById('dz');
 const fi = document.getElementById('fi');
@@ -340,6 +677,9 @@ const singleTool = document.getElementById('singleTool');
 const batchPanel = document.getElementById('batchPanel');
 const compressControls = document.getElementById('compressControls');
 const convertControls = document.getElementById('convertControls');
+const resizeControls = document.getElementById('resizeControls');
+const resizeW = document.getElementById('resizeW');
+const resizeH = document.getElementById('resizeH');
 
 updateQuota();
 
@@ -363,9 +703,14 @@ function switchTool(tool) {
 
   compressControls.classList.toggle('hidden', tool !== 'compress');
   convertControls.classList.toggle('hidden', tool !== 'convert');
-  dropHint.textContent = tool === 'convert'
-    ? '免费转换 JPG · PNG · WebP · 图片不上传服务器'
-    : 'JPG · PNG · WebP · 本地处理，不上传服务器';
+  resizeControls.classList.toggle('hidden', tool !== 'resize');
+  if (tool === 'convert') {
+    dropHint.textContent = '免费转换 JPG · PNG · WebP · 图片不上传服务器';
+  } else if (tool === 'resize') {
+    dropHint.textContent = '自定义宽高 · 头像尺寸 · 平台上传尺寸 · 本地处理';
+  } else {
+    dropHint.textContent = 'JPG · PNG · WebP · 本地处理，不上传服务器';
+  }
   st.className = 'status';
   updateButtonText();
 }
@@ -373,6 +718,10 @@ function switchTool(tool) {
 function runTool() {
   if (activeTool === 'convert') {
     convertImage();
+    return;
+  }
+  if (activeTool === 'resize') {
+    resizeImage();
     return;
   }
   compress();
@@ -402,7 +751,13 @@ function updateButtonText() {
     return;
   }
   btn.disabled = false;
-  btn.textContent = activeTool === 'convert' ? '免费转换为 ' + outputLabel + ' →' : '开始压缩 →';
+  if (activeTool === 'convert') {
+    btn.textContent = '免费转换为 ' + outputLabel + ' →';
+  } else if (activeTool === 'resize') {
+    btn.textContent = '转换尺寸 →';
+  } else {
+    btn.textContent = '开始压缩 →';
+  }
 }
 
 function setTarget(kb) {
@@ -420,6 +775,20 @@ function setFormat(type, label) {
     b.classList.toggle('on', b.textContent.trim() === label);
   });
   updateButtonText();
+}
+
+function setResizePreset(w, h) {
+  resizeW.value = w;
+  resizeH.value = h;
+  document.querySelectorAll('.resize-preset').forEach(b => {
+    b.classList.toggle('on', b.textContent.trim() === w + 'x' + h);
+  });
+}
+
+function setResizeMode(mode, el) {
+  resizeMode = mode;
+  document.querySelectorAll('.mode-grid .format-option').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
 }
 
 function updateQuota() {
@@ -496,6 +865,39 @@ async function convertImage() {
     psize.textContent = '已转换为：' + outputLabel + ' · ' + resultKB + ' KB';
   } catch (e) {
     showStatus('err', '转换失败，请重试');
+  } finally {
+    btn.disabled = false;
+    updateButtonText();
+  }
+}
+
+async function resizeImage() {
+  if (!f) return;
+
+  const width = parseInt(resizeW.value, 10);
+  const height = parseInt(resizeH.value, 10);
+  if (!width || !height || width <= 0 || height <= 0) {
+    showStatus('err', '请输入有效的宽度和高度');
+    return;
+  }
+  if (width > 12000 || height > 12000) {
+    showStatus('err', '尺寸过大，请输入12000以内的宽高');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '处理中...';
+  showStatus('loading', '正在转换图片尺寸...');
+
+  try {
+    const result = await resizeInBrowser(f, width, height, resizeMode);
+    const resultKB = (result.size / 1024).toFixed(1);
+    const base = f.name.replace(/\.[^.]+$/, '');
+    downloadBlob(result, 'resized_' + base + '_' + width + 'x' + height + '.jpg');
+    showStatus('ok', '已转换为 ' + width + 'x' + height + ' · ' + resultKB + ' KB · 已自动下载');
+    psize.textContent = '已转换尺寸：' + width + 'x' + height + ' · ' + resultKB + ' KB';
+  } catch (e) {
+    showStatus('err', '尺寸转换失败，请重试');
   } finally {
     btn.disabled = false;
     updateButtonText();
@@ -581,6 +983,51 @@ function convertInBrowser(file, type) {
   });
 }
 
+function resizeInBrowser(file, width, height, mode) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+      let dx = 0, dy = 0, dw = width, dh = height;
+
+      if (mode === 'contain') {
+        const scale = Math.min(width / img.naturalWidth, height / img.naturalHeight);
+        dw = img.naturalWidth * scale;
+        dh = img.naturalHeight * scale;
+        dx = (width - dw) / 2;
+        dy = (height - dh) / 2;
+      } else if (mode === 'cover') {
+        const targetRatio = width / height;
+        const imageRatio = img.naturalWidth / img.naturalHeight;
+        if (imageRatio > targetRatio) {
+          sw = img.naturalHeight * targetRatio;
+          sx = (img.naturalWidth - sw) / 2;
+        } else {
+          sh = img.naturalWidth / targetRatio;
+          sy = (img.naturalHeight - sh) / 2;
+        }
+      }
+
+      ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
+      canvas.toBlob(blob => {
+        if (!blob) { reject(new Error('Failed')); return; }
+        resolve(blob);
+      }, 'image/jpeg', 0.92);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -588,6 +1035,231 @@ function downloadBlob(blob, filename) {
   a.href = url;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function openUtility(tool) {
+  document.querySelectorAll('.utility-tab').forEach(tab => tab.classList.remove('on'));
+  document.querySelectorAll('.utility-panel').forEach(panel => panel.classList.remove('show'));
+  document.getElementById('util-tab-' + tool).classList.add('on');
+  document.getElementById('util-' + tool).classList.add('show');
+  document.getElementById('utilityLab').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (tool === 'qr') generateQR();
+  if (tool === 'gradient') generateGradient();
+  if (tool === 'social') renderSocialCard(false);
+  if (tool === 'csv') convertCSV();
+  if (tool === 'markdown') renderMarkdown(false);
+}
+
+function generateQR() {
+  const text = document.getElementById('qrText').value.trim();
+  const canvas = document.getElementById('qrCanvas');
+  if (!text) return;
+  if (!window.qrcode) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#0e0e11';
+    ctx.font = '14px sans-serif';
+    ctx.fillText('二维码库加载失败', 72, 128);
+    return;
+  }
+  const qr = qrcode(0, 'M');
+  qr.addData(text);
+  qr.make();
+  const ctx = canvas.getContext('2d');
+  const count = qr.getModuleCount();
+  const margin = 16;
+  const cell = Math.floor((canvas.width - margin * 2) / count);
+  const size = cell * count;
+  const offset = Math.floor((canvas.width - size) / 2);
+  const dark = document.getElementById('qrDark').value;
+  const light = document.getElementById('qrLight').value;
+  ctx.fillStyle = light;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = dark;
+  for (let row = 0; row < count; row++) {
+    for (let col = 0; col < count; col++) {
+      if (qr.isDark(row, col)) {
+        ctx.fillRect(offset + col * cell, offset + row * cell, cell, cell);
+      }
+    }
+  }
+}
+
+function downloadCanvas(id, filename) {
+  const canvas = document.getElementById(id);
+  canvas.toBlob(blob => {
+    if (blob) downloadBlob(blob, filename);
+  }, 'image/png');
+}
+
+function renderSocialCard(shouldDownload = true) {
+  const canvas = document.getElementById('socialCanvas');
+  const ctx = canvas.getContext('2d');
+  const title = document.getElementById('cardTitle').value || 'Browser Tool Suite';
+  const subtitle = document.getElementById('cardSubtitle').value || 'Useful tools that run locally in your browser.';
+  const accent = document.getElementById('cardAccent').value || '#d4ff57';
+  const template = document.getElementById('cardTemplate').value;
+  const light = template === 'light';
+  ctx.fillStyle = light ? '#f7f7f2' : '#0e0e11';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 0, 26, canvas.height);
+  ctx.globalAlpha = 0.15;
+  for (let x = 90; x < canvas.width; x += 90) {
+    ctx.fillRect(x, 0, 1, canvas.height);
+  }
+  for (let y = 90; y < canvas.height; y += 90) {
+    ctx.fillRect(0, y, canvas.width, 1);
+  }
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = light ? '#111111' : '#ffffff';
+  ctx.font = '800 72px Syne, sans-serif';
+  wrapCanvasText(ctx, title, 95, 230, 960, 82);
+  ctx.fillStyle = light ? '#4a4a4a' : '#b7b7b7';
+  ctx.font = '400 30px DM Sans, sans-serif';
+  wrapCanvasText(ctx, subtitle, 100, 400, 920, 42);
+  ctx.fillStyle = accent;
+  ctx.font = '800 24px Syne, sans-serif';
+  ctx.fillText('IMGTOOLS · BROWSER LOCAL', 100, 545);
+  if (shouldDownload) downloadCanvas('socialCanvas', 'social-card.png');
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(/\s+/);
+  let line = '';
+  for (const word of words) {
+    const test = line ? line + ' ' + word : word;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      ctx.fillText(line, x, y);
+      line = word;
+      y += lineHeight;
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, x, y);
+}
+
+function randomColor() {
+  return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+}
+
+function generateGradient() {
+  const colors = [randomColor(), randomColor(), randomColor()];
+  const direction = document.getElementById('gradientDirection').value;
+  const css = 'linear-gradient(' + direction + ', ' + colors.join(', ') + ')';
+  document.getElementById('gradientPreview').style.background = css;
+  document.getElementById('swatchRow').innerHTML = colors.map(c => '<div class="swatch" title="' + c + '" style="background:' + c + '"></div>').join('');
+  document.getElementById('gradientCode').textContent = 'background: ' + css + ';';
+}
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [], cell = '', quote = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i + 1];
+    if (ch === '"' && quote && next === '"') {
+      cell += '"';
+      i++;
+    } else if (ch === '"') {
+      quote = !quote;
+    } else if (ch === ',' && !quote) {
+      row.push(cell.trim());
+      cell = '';
+    } else if ((ch === '\n' || ch === '\r') && !quote) {
+      if (ch === '\r' && next === '\n') i++;
+      row.push(cell.trim());
+      if (row.some(v => v !== '')) rows.push(row);
+      row = [];
+      cell = '';
+    } else {
+      cell += ch;
+    }
+  }
+  row.push(cell.trim());
+  if (row.some(v => v !== '')) rows.push(row);
+  return rows;
+}
+
+function convertCSV() {
+  const rows = parseCSV(document.getElementById('csvInput').value);
+  if (rows.length < 2) {
+    document.getElementById('jsonOutput').textContent = '请粘贴带表头的CSV内容。';
+    return;
+  }
+  const headers = rows[0];
+  const data = rows.slice(1).map(row => {
+    const item = {};
+    headers.forEach((header, index) => {
+      item[header || 'field_' + index] = row[index] || '';
+    });
+    return item;
+  });
+  document.getElementById('jsonOutput').textContent = JSON.stringify(data, null, 2);
+}
+
+function escapeHTML(value) {
+  return value.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function markdownToHTML(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  let html = '', inList = false;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      if (inList) { html += '</ul>'; inList = false; }
+      continue;
+    }
+    if (line.startsWith('# ')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<h1>' + inlineMarkdown(line.slice(2)) + '</h1>';
+    } else if (line.startsWith('## ')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<h2>' + inlineMarkdown(line.slice(3)) + '</h2>';
+    } else if (line.startsWith('### ')) {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<h3>' + inlineMarkdown(line.slice(4)) + '</h3>';
+    } else if (line.startsWith('- ')) {
+      if (!inList) { html += '<ul>'; inList = true; }
+      html += '<li>' + inlineMarkdown(line.slice(2)) + '</li>';
+    } else {
+      if (inList) { html += '</ul>'; inList = false; }
+      html += '<p>' + inlineMarkdown(line) + '</p>';
+    }
+  }
+  if (inList) html += '</ul>';
+  return html;
+}
+
+function inlineMarkdown(text) {
+  return escapeHTML(text)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+}
+
+function renderMarkdown(shouldPrint) {
+  const html = markdownToHTML(document.getElementById('markdownInput').value);
+  document.getElementById('markdownPreview').innerHTML = html;
+  if (shouldPrint) {
+    const w = window.open('', '_blank');
+    w.document.write('<!doctype html><html><head><title>Markdown PDF</title><style>body{font-family:Arial,sans-serif;max-width:760px;margin:40px auto;line-height:1.65;color:#111}code{background:#eee;padding:2px 5px;border-radius:4px}</style></head><body>' + html + '<script>window.print()<\/script></body></html>');
+    w.document.close();
+  }
+}
+
+function jumpTool(tool) {
+  switchTool(tool);
+  document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showSoon(name) {
+  closeModal();
+  st.className = 'status show loading';
+  st.innerHTML = '<div class="sdot"></div><span>' + name + ' 即将上线，先试试当前可用工具。</span>';
+  document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function showPaywall() {
@@ -610,6 +1282,12 @@ function showStatus(type, msg) {
     st.innerHTML = '<div class="sdot"></div><span>' + msg + '</span>';
   }
 }
+
+generateQR();
+renderSocialCard(false);
+generateGradient();
+convertCSV();
+renderMarkdown(false);
 </script>
 </body>
 </html>`
