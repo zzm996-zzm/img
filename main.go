@@ -128,7 +128,6 @@ const indexHTML = `<!DOCTYPE html>
 <title>图片压缩 — 精确压缩到指定大小</title>
 <meta name="description" content="免费在线图片压缩，精确压缩到你指定的KB大小。支持JPG/PNG，无需注册，文件不保存。">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1902780696242483" crossorigin="anonymous"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -306,5 +305,56 @@ function show(type,msg){
   st.innerHTML='<div class="sdot"></div><span>'+msg+'</span>';
 }
 </script>
+
+<style>
+.faq{margin-top:48px}
+.faq-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:24px;letter-spacing:-.01em}
+.faq-item{border-bottom:1px solid var(--border);padding:20px 0;cursor:pointer}
+.faq-item:last-child{border-bottom:none}
+.faq-q{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.faq-arrow{color:var(--muted);font-size:18px;flex-shrink:0;transition:transform .2s}
+.faq-item.open .faq-arrow{transform:rotate(45deg)}
+.faq-a{font-size:14px;color:var(--muted);line-height:1.75;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s}
+.faq-item.open .faq-a{max-height:300px;padding-top:12px}
+</style>
+
+<div class="faq">
+  <div class="faq-title">常见问题</div>
+
+  <div class="faq-item" onclick="this.classList.toggle('open')">
+    <div class="faq-q">如何把图片压缩到200KB以内？<span class="faq-arrow">+</span></div>
+    <div class="faq-a">上传图片后，在目标大小输入框填写"200"，点击"开始压缩"，工具会自动将图片压缩到200KB以内并下载。适合政府表单、招聘网站等对图片大小有严格限制的场景。</div>
+  </div>
+
+  <div class="faq-item" onclick="this.classList.toggle('open')">
+    <div class="faq-q">图片压缩后会不会很模糊？<span class="faq-arrow">+</span></div>
+    <div class="faq-a">我们使用二分法算法，在满足目标大小的前提下尽量保留最高画质。目标大小设置越接近原图大小，画质损失越小。建议目标大小不要设置得过小，否则任何压缩工具都会损失画质。</div>
+  </div>
+
+  <div class="faq-item" onclick="this.classList.toggle('open')">
+    <div class="faq-q">支持压缩到1MB、500KB、100KB吗？<span class="faq-arrow">+</span></div>
+    <div class="faq-a">支持任意目标大小，可以直接点击预设按钮（100KB、200KB、500KB、1MB、2MB），也可以手动输入任意数值。无论是压缩到1MB还是50KB都可以处理。</div>
+  </div>
+
+  <div class="faq-item" onclick="this.classList.toggle('open')">
+    <div class="faq-q">图片会上传到服务器保存吗？<span class="faq-arrow">+</span></div>
+    <div class="faq-a">不会。图片上传后仅用于压缩处理，处理完成后立即删除，不会保存在服务器上。你的图片数据完全安全。</div>
+  </div>
+
+  <div class="faq-item" onclick="this.classList.toggle('open')">
+    <div class="faq-q">支持哪些图片格式？PNG能压缩吗？<span class="faq-arrow">+</span></div>
+    <div class="faq-a">支持 JPG、PNG、WebP 格式。PNG 图片会自动转换为 JPG 格式进行压缩，压缩效果更好，文件体积更小。最大支持20MB的图片文件。</div>
+  </div>
+
+  <div class="faq-item" onclick="this.classList.toggle('open')">
+    <div class="faq-q">微信发图片太模糊，怎么压缩后还能保持清晰？<span class="faq-arrow">+</span></div>
+    <div class="faq-a">微信会对超过5MB的图片进行二次压缩。建议将图片压缩到4MB以内再发送，可以有效避免微信的自动压缩，保持图片清晰度。在目标大小输入"4096"（即4MB）即可。</div>
+  </div>
+
+  <div class="faq-item" onclick="this.classList.toggle('open')">
+    <div class="faq-q">这个工具免费吗？有使用次数限制吗？<span class="faq-arrow">+</span></div>
+    <div class="faq-a">完全免费，无需注册，无使用次数限制，直接使用即可。</div>
+  </div>
+</div>
 </body>
 </html>`
