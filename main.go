@@ -1,22 +1,13 @@
 package main
 
 import (
-	"bytes"
-	"fmt"
-	"image"
-	"image/jpeg"
-	"image/png"
-	"io"
 	"log"
 	"net/http"
-	"strconv"
-	"strings"
 )
 
 func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleIndex)
-	mux.HandleFunc("/compress", handleCompress)
 	mux.HandleFunc("/google6409d0c57bc30ecb.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte("google-site-verification: google6409d0c57bc30ecb.html"))
@@ -24,99 +15,6 @@ func main() {
 	port := "8081"
 	log.Printf("Server running at http://localhost:%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, mux))
-}
-
-func handleCompress(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, 20<<20)
-	if err := r.ParseMultipartForm(20 << 20); err != nil {
-		http.Error(w, "File too large (max 20MB)", http.StatusBadRequest)
-		return
-	}
-	targetKBStr := r.FormValue("target_kb")
-	targetKB, err := strconv.ParseFloat(targetKBStr, 64)
-	if err != nil || targetKB <= 0 {
-		http.Error(w, "Invalid target size", http.StatusBadRequest)
-		return
-	}
-	targetBytes := int(targetKB * 1024)
-	file, header, err := r.FormFile("image")
-	if err != nil {
-		http.Error(w, "Failed to read image", http.StatusBadRequest)
-		return
-	}
-	defer file.Close()
-	data, err := io.ReadAll(file)
-	if err != nil {
-		http.Error(w, "Failed to read image data", http.StatusInternalServerError)
-		return
-	}
-	if len(data) <= targetBytes {
-		w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="compressed_%s"`, header.Filename))
-		w.Header().Set("Content-Type", header.Header.Get("Content-Type"))
-		w.Write(data)
-		return
-	}
-	img, format, err := image.Decode(bytes.NewReader(data))
-	if err != nil {
-		http.Error(w, "Unsupported image format", http.StatusBadRequest)
-		return
-	}
-	result, finalFormat, err := compressToTarget(img, format, targetBytes)
-	if err != nil {
-		http.Error(w, "Compression failed: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	ext := "." + finalFormat
-	baseName := strings.TrimSuffix(header.Filename, "."+format)
-	outName := fmt.Sprintf("compressed_%s%s", baseName, ext)
-	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, outName))
-	w.Header().Set("Content-Type", "image/"+finalFormat)
-	w.Header().Set("Content-Length", strconv.Itoa(len(result)))
-	w.Write(result)
-}
-
-func compressToTarget(img image.Image, format string, targetBytes int) ([]byte, string, error) {
-	outFormat := format
-	if format == "png" {
-		outFormat = "jpeg"
-	}
-	if outFormat == "jpeg" || outFormat == "jpg" {
-		return compressJPEG(img, targetBytes)
-	}
-	var buf bytes.Buffer
-	if err := png.Encode(&buf, img); err != nil {
-		return nil, "", err
-	}
-	return buf.Bytes(), "png", nil
-}
-
-func compressJPEG(img image.Image, targetBytes int) ([]byte, string, error) {
-	low, high := 1, 95
-	var bestResult []byte
-	for low <= high {
-		mid := (low + high) / 2
-		var buf bytes.Buffer
-		err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: mid})
-		if err != nil {
-			return nil, "", err
-		}
-		if buf.Len() <= targetBytes {
-			bestResult = buf.Bytes()
-			low = mid + 1
-		} else {
-			high = mid - 1
-		}
-	}
-	if bestResult == nil {
-		var buf bytes.Buffer
-		jpeg.Encode(&buf, img, &jpeg.Options{Quality: 1})
-		return buf.Bytes(), "jpeg", nil
-	}
-	return bestResult, "jpeg", nil
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -129,9 +27,10 @@ const indexHTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>图片压缩 — 精确压缩到指定大小</title>
-<meta name="description" content="免费在线图片压缩，精确压缩到你指定的KB大小。支持JPG/PNG，无需注册，文件不保存。">
+<title>图片压缩 — 精确压缩到指定大小 | 免费在线工具</title>
+<meta name="description" content="免费在线图片压缩，精确压缩到你指定的KB大小。支持JPG/PNG，无需注册，文件不上传服务器，完全在浏览器本地处理。">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1902780696242483" crossorigin="anonymous"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -149,6 +48,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 h1{font-family:'Syne',sans-serif;font-size:clamp(34px,6vw,54px);font-weight:800;line-height:1.05;letter-spacing:-.02em;margin-bottom:14px}
 h1 em{color:var(--accent);font-style:normal}
 .desc{color:var(--muted);font-size:15px;line-height:1.65;max-width:460px;margin-bottom:48px}
+
+/* 免费次数提示 */
+.quota-bar{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:20px;gap:12px}
+.quota-left{font-size:13px;color:var(--muted)}
+.quota-left strong{color:var(--text);font-family:'Syne',sans-serif}
+.quota-track{flex:1;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden}
+.quota-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .4s}
+.quota-fill.low{background:var(--danger)}
+
 .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px;margin-bottom:20px}
 .drop-zone{border:1.5px dashed rgba(255,255,255,0.12);border-radius:14px;padding:52px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2);margin-bottom:24px}
 .drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:var(--accent-dim)}
@@ -176,10 +84,12 @@ h1 em{color:var(--accent);font-style:normal}
 .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}
 .preset{padding:6px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
 .preset:hover,.preset.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
-.btn{width:100%;padding:16px;background:var(--accent);color:#0e0e11;border:none;border-radius:12px;font-size:16px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.01em}
+.btn{width:100%;padding:16px;background:var(--accent);color:#0e0e11;border:none;border-radius:12px;font-size:16px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;transition:all .2s}
 .btn:hover:not(:disabled){background:#c8f53f;transform:translateY(-1px)}
 .btn:active:not(:disabled){transform:translateY(0)}
 .btn:disabled{background:var(--surface2);color:var(--muted);cursor:not-allowed;border:1px solid var(--border)}
+.btn.pay{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff}
+.btn.pay:hover:not(:disabled){background:linear-gradient(135deg,#d97706,#dc2626);transform:translateY(-1px)}
 .status{display:none;margin-top:14px;padding:13px 16px;border-radius:10px;font-size:13px;font-weight:500;align-items:center;gap:10px}
 .status.show{display:flex}
 .status.loading{background:rgba(255,255,255,0.03);border:1px solid var(--border);color:var(--muted)}
@@ -191,12 +101,37 @@ h1 em{color:var(--accent);font-style:normal}
 .err .sdot{background:var(--danger)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.08);border-top-color:var(--muted);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+
+/* paywall modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:100;align-items:center;justify-content:center;padding:24px}
+.overlay.show{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:40px 32px;max-width:420px;width:100%;text-align:center}
+.modal-icon{font-size:48px;margin-bottom:16px}
+.modal-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:8px}
+.modal-desc{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:28px}
+.modal-price{font-family:'Syne',sans-serif;font-size:42px;font-weight:800;color:var(--accent);margin-bottom:4px}
+.modal-price-desc{font-size:13px;color:var(--muted);margin-bottom:28px}
+.modal-features{text-align:left;background:var(--surface2);border-radius:12px;padding:16px 20px;margin-bottom:24px}
+.modal-feature{font-size:13px;color:var(--text);padding:5px 0;display:flex;align-items:center;gap:10px}
+.modal-feature::before{content:'✓';color:var(--accent);font-weight:700;flex-shrink:0}
+.modal-close{margin-top:16px;font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline}
+.modal-close:hover{color:var(--text)}
+
 .features{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 @media(max-width:500px){.features{grid-template-columns:1fr}}
 .feat{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px}
 .feat-icon{font-size:20px;margin-bottom:10px}
 .feat-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:4px}
 .feat-desc{font-size:12px;color:var(--muted);line-height:1.55}
+.faq{margin-top:48px}
+.faq-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:24px;letter-spacing:-.01em}
+.faq-item{border-bottom:1px solid var(--border);padding:20px 0;cursor:pointer}
+.faq-item:last-child{border-bottom:none}
+.faq-q{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:16px}
+.faq-arrow{color:var(--muted);font-size:18px;flex-shrink:0;transition:transform .2s}
+.faq-item.open .faq-arrow{transform:rotate(45deg)}
+.faq-a{font-size:14px;color:var(--muted);line-height:1.75;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s}
+.faq-item.open .faq-a{max-height:300px;padding-top:12px}
 @keyframes up{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
 .header{animation:up .5s ease both}
 .card{animation:up .5s ease .08s both}
@@ -208,7 +143,13 @@ h1 em{color:var(--accent);font-style:normal}
   <div class="header">
     <div class="badge"><span class="badge-dot"></span>免费工具</div>
     <h1>图片压缩<br><em>精确到你要的大小</em></h1>
-    <p class="desc">填一个目标KB数，自动压缩到位。政府表单、邮件附件、微信上传，再也不超限。</p>
+    <p class="desc">填一个目标KB数，在你的浏览器本地完成压缩。图片不上传服务器，完全私密。</p>
+  </div>
+
+  <!-- 免费次数进度条 -->
+  <div class="quota-bar" id="quotaBar">
+    <div class="quota-left">免费次数：<strong id="quotaText">100 / 100</strong></div>
+    <div class="quota-track"><div class="quota-fill" id="quotaFill" style="width:100%"></div></div>
   </div>
 
   <div class="card">
@@ -216,7 +157,7 @@ h1 em{color:var(--accent);font-style:normal}
       <input type="file" id="fi" accept="image/jpeg,image/png,image/webp">
       <div class="drop-icon">🖼</div>
       <div class="drop-title">拖拽图片到这里，或<span>点击选择</span></div>
-      <div class="drop-hint">JPG · PNG · WebP &nbsp;·&nbsp; 最大 20MB</div>
+      <div class="drop-hint">JPG · PNG · WebP &nbsp;·&nbsp; 本地处理，不上传服务器</div>
     </div>
 
     <div class="preview" id="prev">
@@ -233,132 +174,257 @@ h1 em{color:var(--accent);font-style:normal}
       <input class="size-input" type="number" id="tgt" value="200" min="10" max="20000">
       <span class="size-unit">KB</span>
     </div>
-    <div class="presets" id="presets">
-      <button class="preset" onclick="set(100)">100 KB</button>
-      <button class="preset on" onclick="set(200)">200 KB</button>
-      <button class="preset" onclick="set(500)">500 KB</button>
-      <button class="preset" onclick="set(1024)">1 MB</button>
-      <button class="preset" onclick="set(2048)">2 MB</button>
+    <div class="presets">
+      <button class="preset" onclick="setTarget(100)">100 KB</button>
+      <button class="preset on" onclick="setTarget(200)">200 KB</button>
+      <button class="preset" onclick="setTarget(500)">500 KB</button>
+      <button class="preset" onclick="setTarget(1024)">1 MB</button>
+      <button class="preset" onclick="setTarget(2048)">2 MB</button>
     </div>
 
-    <button class="btn" id="btn" onclick="go()" disabled>选择图片后开始</button>
-    <div class="status" id="st"><span id="sttext"></span></div>
+    <button class="btn" id="btn" onclick="compress()" disabled>选择图片后开始</button>
+    <div class="status" id="st"></div>
   </div>
 
   <div class="features">
-    <div class="feat"><div class="feat-icon">⚡</div><div class="feat-title">精确压缩</div><div class="feat-desc">二分法算法，紧贴目标大小，不会超限</div></div>
-    <div class="feat"><div class="feat-icon">🔒</div><div class="feat-title">不留存文件</div><div class="feat-desc">处理完即删除，图片不保存在服务器</div></div>
-    <div class="feat"><div class="feat-icon">🆓</div><div class="feat-title">完全免费</div><div class="feat-desc">无需注册，无次数限制，直接用</div></div>
+    <div class="feat"><div class="feat-icon">⚡</div><div class="feat-title">浏览器本地处理</div><div class="feat-desc">图片不上传服务器，速度快，完全私密</div></div>
+    <div class="feat"><div class="feat-icon">🎯</div><div class="feat-title">精确压缩</div><div class="feat-desc">二分法算法，紧贴目标大小，不会超限</div></div>
+    <div class="feat"><div class="feat-icon">🆓</div><div class="feat-title">100次免费</div><div class="feat-desc">每位用户免费100次，之后$10解锁无限使用</div></div>
+  </div>
+
+  <div class="faq">
+    <div class="faq-title">常见问题</div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">如何把图片压缩到200KB以内？<span class="faq-arrow">+</span></div>
+      <div class="faq-a">上传图片后，在目标大小输入框填写"200"，点击"开始压缩"，工具会自动将图片压缩到200KB以内并下载。适合政府表单、招聘网站等对图片大小有严格限制的场景。</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">图片压缩后会不会很模糊？<span class="faq-arrow">+</span></div>
+      <div class="faq-a">我们使用二分法算法，在满足目标大小的前提下尽量保留最高画质。目标大小设置越接近原图大小，画质损失越小。</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">支持压缩到1MB、500KB、100KB吗？<span class="faq-arrow">+</span></div>
+      <div class="faq-a">支持任意目标大小，可以直接点击预设按钮，也可以手动输入任意数值。无论压缩到1MB还是50KB都可以处理。</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">图片会上传到服务器保存吗？<span class="faq-arrow">+</span></div>
+      <div class="faq-a">不会。所有压缩操作完全在你的浏览器本地完成，图片数据从不离开你的设备，完全私密安全。</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">支持哪些图片格式？PNG能压缩吗？<span class="faq-arrow">+</span></div>
+      <div class="faq-a">支持 JPG、PNG、WebP 格式。PNG 图片会自动转换为 JPG 格式进行压缩，压缩效果更好，文件体积更小。</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">微信发图片太模糊，怎么办？<span class="faq-arrow">+</span></div>
+      <div class="faq-a">微信会对超过5MB的图片进行二次压缩。建议将图片压缩到4MB以内再发送，在目标大小输入"4096"即可有效避免微信自动压缩。</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+      <div class="faq-q">免费次数用完了怎么办？<span class="faq-arrow">+</span></div>
+      <div class="faq-a">免费额度用完后，支付$10即可解锁无限次使用，一次付费永久有效，不收月费。</div>
+    </div>
+  </div>
+</div>
+
+<!-- Paywall Modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-icon">🎉</div>
+    <div class="modal-title">已用完免费次数</div>
+    <div class="modal-desc">你已完成100次免费压缩。支付一次，永久无限使用。</div>
+    <div class="modal-price">$10</div>
+    <div class="modal-price-desc">一次付费 · 永久有效 · 无月费</div>
+    <div class="modal-features">
+      <div class="modal-feature">无限次图片压缩</div>
+      <div class="modal-feature">精确压缩到任意指定大小</div>
+      <div class="modal-feature">浏览器本地处理，完全私密</div>
+      <div class="modal-feature">支持 JPG / PNG / WebP</div>
+    </div>
+    <button class="btn pay" onclick="goPay()">立即解锁 $10 →</button>
+    <div class="modal-close" onclick="closeModal()">暂时不需要</div>
   </div>
 </div>
 
 <script>
-let f=null;
-const dz=document.getElementById('dz'),fi=document.getElementById('fi'),
-      prev=document.getElementById('prev'),pimg=document.getElementById('pimg'),
-      pname=document.getElementById('pname'),psize=document.getElementById('psize'),
-      btn=document.getElementById('btn'),st=document.getElementById('st'),
-      sttext=document.getElementById('sttext');
+const FREE_LIMIT = 100;
+const STORAGE_KEY = 'img_compress_count';
 
-dz.onclick=()=>fi.click();
-dz.ondragover=e=>{e.preventDefault();dz.classList.add('over')};
-dz.ondragleave=()=>dz.classList.remove('over');
-dz.ondrop=e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])};
-fi.onchange=e=>{if(e.target.files[0])load(e.target.files[0])};
+let f = null;
+let usedCount = parseInt(localStorage.getItem(STORAGE_KEY) || '0');
 
-function load(file){
-  if(!file.type.startsWith('image/')){show('err','请选择图片文件');return}
-  f=file;
-  const r=new FileReader();
-  r.onload=e=>{pimg.src=e.target.result;pname.textContent=file.name;psize.textContent='原始大小：'+(file.size/1024).toFixed(1)+' KB';prev.classList.add('show');dz.style.display='none'};
+const dz = document.getElementById('dz');
+const fi = document.getElementById('fi');
+const prev = document.getElementById('prev');
+const pimg = document.getElementById('pimg');
+const pname = document.getElementById('pname');
+const psize = document.getElementById('psize');
+const btn = document.getElementById('btn');
+const st = document.getElementById('st');
+
+updateQuota();
+
+dz.onclick = () => fi.click();
+dz.ondragover = e => { e.preventDefault(); dz.classList.add('over'); };
+dz.ondragleave = () => dz.classList.remove('over');
+dz.ondrop = e => { e.preventDefault(); dz.classList.remove('over'); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); };
+fi.onchange = e => { if (e.target.files[0]) load(e.target.files[0]); };
+
+function load(file) {
+  if (!file.type.startsWith('image/')) { showStatus('err', '请选择图片文件'); return; }
+  f = file;
+  const r = new FileReader();
+  r.onload = e => {
+    pimg.src = e.target.result;
+    pname.textContent = file.name;
+    psize.textContent = '原始大小：' + (file.size / 1024).toFixed(1) + ' KB';
+    prev.classList.add('show');
+    dz.style.display = 'none';
+  };
   r.readAsDataURL(file);
-  btn.disabled=false;btn.textContent='开始压缩 →';st.className='status';
+  btn.disabled = false;
+  btn.textContent = '开始压缩 →';
+  st.className = 'status';
 }
 
-function set(kb){
-  document.getElementById('tgt').value=kb;
-  document.querySelectorAll('.preset').forEach(b=>b.classList.toggle('on',parseInt(b.textContent)===kb||(kb===1024&&b.textContent.includes('1 MB'))||(kb===2048&&b.textContent.includes('2 MB'))));
+function setTarget(kb) {
+  document.getElementById('tgt').value = kb;
+  document.querySelectorAll('.preset').forEach(b => {
+    const val = parseInt(b.textContent);
+    b.classList.toggle('on', val === kb || (kb === 1024 && b.textContent.includes('1 MB')) || (kb === 2048 && b.textContent.includes('2 MB')));
+  });
 }
 
-async function go(){
-  if(!f)return;
-  const kb=parseFloat(document.getElementById('tgt').value);
-  if(!kb||kb<=0){show('err','请输入有效的目标大小');return}
-  btn.disabled=true;btn.textContent='压缩中...';
-  st.className='status show loading';
-  st.innerHTML='<div class="spinner"></div><span>正在处理，请稍候...</span>';
-
-  const fd=new FormData();fd.append('image',f);fd.append('target_kb',kb.toString());
-  try{
-    const resp=await fetch('/compress',{method:'POST',body:fd});
-    if(!resp.ok){show('err','压缩失败：'+await resp.text());return}
-    const blob=await resp.blob();
-    const rKB=(blob.size/1024).toFixed(1),oKB=(f.size/1024).toFixed(1);
-    const saved=(((f.size-blob.size)/f.size)*100).toFixed(0);
-    const url=URL.createObjectURL(blob),a=document.createElement('a');
-    const cd=resp.headers.get('Content-Disposition')||'',m=cd.match(/filename="(.+?)"/);
-    a.download=m?m[1]:'compressed.jpg';a.href=url;a.click();URL.revokeObjectURL(url);
-    show('ok',oKB+' KB → '+rKB+' KB · 减少 '+saved+'% · 已自动下载');
-    psize.textContent='原始：'+oKB+' KB → 压缩后：'+rKB+' KB';
-  }catch(e){show('err','网络错误，请重试')}
-  finally{btn.disabled=false;btn.textContent='再次压缩 →'}
+function updateQuota() {
+  const remaining = Math.max(0, FREE_LIMIT - usedCount);
+  const pct = (remaining / FREE_LIMIT) * 100;
+  document.getElementById('quotaText').textContent = remaining + ' / ' + FREE_LIMIT;
+  const fill = document.getElementById('quotaFill');
+  fill.style.width = pct + '%';
+  fill.className = 'quota-fill' + (remaining <= 10 ? ' low' : '');
 }
 
-function show(type,msg){
-  st.className='status show '+type;
-  st.innerHTML='<div class="sdot"></div><span>'+msg+'</span>';
+async function compress() {
+  if (!f) return;
+
+  // 检查免费次数
+  if (usedCount >= FREE_LIMIT) {
+    showPaywall();
+    return;
+  }
+
+  const targetKB = parseFloat(document.getElementById('tgt').value);
+  if (!targetKB || targetKB <= 0) { showStatus('err', '请输入有效的目标大小'); return; }
+  const targetBytes = targetKB * 1024;
+
+  btn.disabled = true;
+  btn.textContent = '压缩中...';
+  showStatus('loading', '正在压缩，请稍候...');
+
+  try {
+    const result = await compressInBrowser(f, targetBytes);
+    const origKB = (f.size / 1024).toFixed(1);
+    const resultKB = (result.size / 1024).toFixed(1);
+    const saved = (((f.size - result.size) / f.size) * 100).toFixed(0);
+
+    // 下载
+    const url = URL.createObjectURL(result);
+    const a = document.createElement('a');
+    const ext = result.type === 'image/png' ? '.png' : '.jpg';
+    const base = f.name.replace(/\.[^.]+$/, '');
+    a.download = 'compressed_' + base + ext;
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    // 记录次数
+    usedCount++;
+    localStorage.setItem(STORAGE_KEY, usedCount);
+    updateQuota();
+
+    showStatus('ok', origKB + ' KB → ' + resultKB + ' KB · 减少 ' + saved + '% · 已自动下载');
+    psize.textContent = '原始：' + origKB + ' KB → 压缩后：' + resultKB + ' KB';
+  } catch (e) {
+    showStatus('err', '压缩失败，请重试');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '再次压缩 →';
+  }
+}
+
+// 浏览器端二分法压缩
+function compressInBrowser(file, targetBytes) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+
+      // 如果原图已经小于目标，直接返回
+      if (file.size <= targetBytes) {
+        canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.95);
+        return;
+      }
+
+      // 二分法找最优 quality
+      let low = 0.01, high = 0.95, bestBlob = null, attempts = 0;
+
+      function tryQuality(q) {
+        canvas.toBlob(blob => {
+          attempts++;
+          if (!blob) { reject(new Error('Failed')); return; }
+
+          if (blob.size <= targetBytes) {
+            bestBlob = blob;
+            low = q;
+          } else {
+            high = q;
+          }
+
+          if (attempts >= 10 || (high - low) < 0.01) {
+            if (bestBlob) {
+              resolve(bestBlob);
+            } else {
+              // 还是太大，用最低质量
+              canvas.toBlob(b => resolve(b), 'image/jpeg', 0.01);
+            }
+            return;
+          }
+          tryQuality((low + high) / 2);
+        }, 'image/jpeg', q);
+      }
+
+      tryQuality((low + high) / 2);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+function showPaywall() {
+  document.getElementById('overlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('show');
+}
+
+function goPay() {
+  // 跳转到支付页面，后续接入 Lemon Squeezy
+  alert('支付功能即将上线，敬请期待！');
+}
+
+function showStatus(type, msg) {
+  st.className = 'status show ' + type;
+  if (type === 'loading') {
+    st.innerHTML = '<div class="spinner"></div><span>' + msg + '</span>';
+  } else {
+    st.innerHTML = '<div class="sdot"></div><span>' + msg + '</span>';
+  }
 }
 </script>
-
-<style>
-.faq{margin-top:48px}
-.faq-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:24px;letter-spacing:-.01em}
-.faq-item{border-bottom:1px solid var(--border);padding:20px 0;cursor:pointer}
-.faq-item:last-child{border-bottom:none}
-.faq-q{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:16px}
-.faq-arrow{color:var(--muted);font-size:18px;flex-shrink:0;transition:transform .2s}
-.faq-item.open .faq-arrow{transform:rotate(45deg)}
-.faq-a{font-size:14px;color:var(--muted);line-height:1.75;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s}
-.faq-item.open .faq-a{max-height:300px;padding-top:12px}
-</style>
-
-<div class="faq">
-  <div class="faq-title">常见问题</div>
-
-  <div class="faq-item" onclick="this.classList.toggle('open')">
-    <div class="faq-q">如何把图片压缩到200KB以内？<span class="faq-arrow">+</span></div>
-    <div class="faq-a">上传图片后，在目标大小输入框填写"200"，点击"开始压缩"，工具会自动将图片压缩到200KB以内并下载。适合政府表单、招聘网站等对图片大小有严格限制的场景。</div>
-  </div>
-
-  <div class="faq-item" onclick="this.classList.toggle('open')">
-    <div class="faq-q">图片压缩后会不会很模糊？<span class="faq-arrow">+</span></div>
-    <div class="faq-a">我们使用二分法算法，在满足目标大小的前提下尽量保留最高画质。目标大小设置越接近原图大小，画质损失越小。建议目标大小不要设置得过小，否则任何压缩工具都会损失画质。</div>
-  </div>
-
-  <div class="faq-item" onclick="this.classList.toggle('open')">
-    <div class="faq-q">支持压缩到1MB、500KB、100KB吗？<span class="faq-arrow">+</span></div>
-    <div class="faq-a">支持任意目标大小，可以直接点击预设按钮（100KB、200KB、500KB、1MB、2MB），也可以手动输入任意数值。无论是压缩到1MB还是50KB都可以处理。</div>
-  </div>
-
-  <div class="faq-item" onclick="this.classList.toggle('open')">
-    <div class="faq-q">图片会上传到服务器保存吗？<span class="faq-arrow">+</span></div>
-    <div class="faq-a">不会。图片上传后仅用于压缩处理，处理完成后立即删除，不会保存在服务器上。你的图片数据完全安全。</div>
-  </div>
-
-  <div class="faq-item" onclick="this.classList.toggle('open')">
-    <div class="faq-q">支持哪些图片格式？PNG能压缩吗？<span class="faq-arrow">+</span></div>
-    <div class="faq-a">支持 JPG、PNG、WebP 格式。PNG 图片会自动转换为 JPG 格式进行压缩，压缩效果更好，文件体积更小。最大支持20MB的图片文件。</div>
-  </div>
-
-  <div class="faq-item" onclick="this.classList.toggle('open')">
-    <div class="faq-q">微信发图片太模糊，怎么压缩后还能保持清晰？<span class="faq-arrow">+</span></div>
-    <div class="faq-a">微信会对超过5MB的图片进行二次压缩。建议将图片压缩到4MB以内再发送，可以有效避免微信的自动压缩，保持图片清晰度。在目标大小输入"4096"（即4MB）即可。</div>
-  </div>
-
-  <div class="faq-item" onclick="this.classList.toggle('open')">
-    <div class="faq-q">这个工具免费吗？有使用次数限制吗？<span class="faq-arrow">+</span></div>
-    <div class="faq-a">完全免费，无需注册，无使用次数限制，直接使用即可。</div>
-  </div>
-</div>
 </body>
 </html>`
