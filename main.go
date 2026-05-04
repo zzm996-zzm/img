@@ -48,8 +48,8 @@ const indexHTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>图片压缩 — 精确压缩到指定大小 | 免费在线工具</title>
-<meta name="description" content="免费在线图片压缩，精确压缩到你指定的KB大小。支持JPG/PNG，无需注册，文件不上传服务器，完全在浏览器本地处理。">
+<title>图片压缩与格式转换 — 精确压缩到指定大小 | 免费在线工具</title>
+<meta name="description" content="免费在线图片压缩和格式转换，精确压缩到你指定的KB大小，支持JPG/PNG/WebP互转。图片不上传服务器，完全在浏览器本地处理。">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1902780696242483" crossorigin="anonymous"></script>
 <style>
@@ -81,6 +81,12 @@ h1 em{color:var(--accent);font-style:normal}
 .quota-unlock:hover{background:var(--accent-dim)}
 
 .card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px;margin-bottom:20px}
+.tool-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:6px;margin-bottom:24px}
+.tool-tab{border:0;background:transparent;color:var(--muted);border-radius:8px;padding:11px 8px;font-size:13px;font-weight:700;cursor:pointer;transition:all .18s;white-space:nowrap}
+.tool-tab:hover{color:var(--text);background:rgba(255,255,255,0.04)}
+.tool-tab.on{background:var(--accent);color:#0e0e11}
+.tool-tab .pro{display:inline-block;margin-left:5px;font-size:10px;color:inherit;opacity:.72}
+.tool-box.hidden,.tool-controls.hidden{display:none}
 .drop-zone{border:1.5px dashed rgba(255,255,255,0.12);border-radius:14px;padding:52px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface2);margin-bottom:24px}
 .drop-zone:hover,.drop-zone.over{border-color:var(--accent);background:var(--accent-dim)}
 .drop-zone.over{transform:scale(1.01)}
@@ -107,6 +113,17 @@ h1 em{color:var(--accent);font-style:normal}
 .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}
 .preset{padding:6px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s}
 .preset:hover,.preset.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.format-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:28px}
+.format-option{padding:13px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;transition:all .15s}
+.format-option:hover,.format-option.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.pro-panel{display:none;background:var(--surface2);border:1px solid rgba(212,255,87,0.24);border-radius:14px;padding:28px;text-align:left}
+.pro-panel.show{display:block}
+.pro-kicker{display:inline-flex;align-items:center;background:var(--accent-dim);border:1px solid rgba(212,255,87,0.25);color:var(--accent);border-radius:999px;padding:5px 10px;font-size:11px;font-weight:800;margin-bottom:16px}
+.pro-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:10px}
+.pro-desc{font-size:14px;color:var(--muted);line-height:1.65;margin-bottom:18px}
+.pro-list{display:grid;gap:8px;margin-bottom:22px}
+.pro-item{font-size:13px;color:var(--text);display:flex;gap:10px;align-items:center}
+.pro-item::before{content:'✓';color:var(--accent);font-weight:800}
 .btn{width:100%;padding:16px;background:var(--accent);color:#0e0e11;border:none;border-radius:12px;font-size:16px;font-family:'Syne',sans-serif;font-weight:700;cursor:pointer;transition:all .2s}
 .btn:hover:not(:disabled){background:#c8f53f;transform:translateY(-1px)}
 .btn:active:not(:disabled){transform:translateY(0)}
@@ -177,43 +194,74 @@ h1 em{color:var(--accent);font-style:normal}
   </div>
 
   <div class="card">
-    <div class="drop-zone" id="dz">
-      <input type="file" id="fi" accept="image/jpeg,image/png,image/webp">
-      <div class="drop-icon">🖼</div>
-      <div class="drop-title">拖拽图片到这里，或<span>点击选择</span></div>
-      <div class="drop-hint">JPG · PNG · WebP &nbsp;·&nbsp; 本地处理，不上传服务器</div>
+    <div class="tool-tabs">
+      <button class="tool-tab on" id="tab-compress" onclick="switchTool('compress')">单张压缩</button>
+      <button class="tool-tab" id="tab-convert" onclick="switchTool('convert')">格式转换</button>
+      <button class="tool-tab" id="tab-batch" onclick="switchTool('batch')">批量压缩 <span class="pro">PRO</span></button>
     </div>
 
-    <div class="preview" id="prev">
-      <img class="prev-img" id="pimg" src="" alt="">
-      <div class="prev-info">
-        <div class="prev-name" id="pname"></div>
-        <div class="prev-size" id="psize"></div>
+    <div class="tool-box" id="singleTool">
+      <div class="drop-zone" id="dz">
+        <input type="file" id="fi" accept="image/jpeg,image/png,image/webp">
+        <div class="drop-icon">🖼</div>
+        <div class="drop-title">拖拽图片到这里，或<span>点击选择</span></div>
+        <div class="drop-hint" id="dropHint">JPG · PNG · WebP &nbsp;·&nbsp; 本地处理，不上传服务器</div>
       </div>
-      <div class="prev-change" onclick="document.getElementById('fi').click()">换一张</div>
+
+      <div class="preview" id="prev">
+        <img class="prev-img" id="pimg" src="" alt="">
+        <div class="prev-info">
+          <div class="prev-name" id="pname"></div>
+          <div class="prev-size" id="psize"></div>
+        </div>
+        <div class="prev-change" onclick="document.getElementById('fi').click()">换一张</div>
+      </div>
+
+      <div class="tool-controls" id="compressControls">
+        <div class="field-label">目标文件大小</div>
+        <div class="size-row">
+          <input class="size-input" type="number" id="tgt" value="200" min="10" max="20000">
+          <span class="size-unit">KB</span>
+        </div>
+        <div class="presets">
+          <button class="preset" onclick="setTarget(100)">100 KB</button>
+          <button class="preset on" onclick="setTarget(200)">200 KB</button>
+          <button class="preset" onclick="setTarget(500)">500 KB</button>
+          <button class="preset" onclick="setTarget(1024)">1 MB</button>
+          <button class="preset" onclick="setTarget(2048)">2 MB</button>
+        </div>
+      </div>
+
+      <div class="tool-controls hidden" id="convertControls">
+        <div class="field-label">输出格式</div>
+        <div class="format-grid">
+          <button class="format-option on" onclick="setFormat('image/jpeg', 'JPG')">JPG</button>
+          <button class="format-option" onclick="setFormat('image/png', 'PNG')">PNG</button>
+          <button class="format-option" onclick="setFormat('image/webp', 'WebP')">WebP</button>
+        </div>
+      </div>
+
+      <button class="btn" id="btn" onclick="runTool()" disabled>选择图片后开始</button>
+      <div class="status" id="st"></div>
     </div>
 
-    <div class="field-label">目标文件大小</div>
-    <div class="size-row">
-      <input class="size-input" type="number" id="tgt" value="200" min="10" max="20000">
-      <span class="size-unit">KB</span>
+    <div class="pro-panel" id="batchPanel">
+      <div class="pro-kicker">PRO TOOL</div>
+      <div class="pro-title">批量图片压缩</div>
+      <div class="pro-desc">一次选择多张图片，统一压缩到指定大小，适合电商图、证件资料、社媒素材和表单上传前的批处理。</div>
+      <div class="pro-list">
+        <div class="pro-item">批量处理 JPG / PNG / WebP</div>
+        <div class="pro-item">统一目标大小，减少重复操作</div>
+        <div class="pro-item">浏览器本地处理，图片不上传服务器</div>
+      </div>
+      <button class="btn pay" onclick="showPaywall()">使用 PayPal 解锁批量压缩 →</button>
     </div>
-    <div class="presets">
-      <button class="preset" onclick="setTarget(100)">100 KB</button>
-      <button class="preset on" onclick="setTarget(200)">200 KB</button>
-      <button class="preset" onclick="setTarget(500)">500 KB</button>
-      <button class="preset" onclick="setTarget(1024)">1 MB</button>
-      <button class="preset" onclick="setTarget(2048)">2 MB</button>
-    </div>
-
-    <button class="btn" id="btn" onclick="compress()" disabled>选择图片后开始</button>
-    <div class="status" id="st"></div>
   </div>
 
   <div class="features">
     <div class="feat"><div class="feat-icon">⚡</div><div class="feat-title">浏览器本地处理</div><div class="feat-desc">图片不上传服务器，速度快，完全私密</div></div>
     <div class="feat"><div class="feat-icon">🎯</div><div class="feat-title">精确压缩</div><div class="feat-desc">二分法算法，紧贴目标大小，不会超限</div></div>
-    <div class="feat"><div class="feat-icon">🆓</div><div class="feat-title">100次免费</div><div class="feat-desc">每位用户免费100次，之后$10解锁无限使用</div></div>
+    <div class="feat"><div class="feat-icon">🆓</div><div class="feat-title">免费格式转换</div><div class="feat-desc">JPG、PNG、WebP互转，免费使用</div></div>
   </div>
 
   <div class="faq">
@@ -253,13 +301,13 @@ h1 em{color:var(--accent);font-style:normal}
 <div class="overlay" id="overlay">
   <div class="modal">
     <div class="modal-icon">🎉</div>
-    <div class="modal-title">已用完免费次数</div>
-    <div class="modal-desc">你已完成100次免费压缩。支付一次，永久无限使用。</div>
+    <div class="modal-title">解锁 Pro 工具</div>
+    <div class="modal-desc">解锁批量图片压缩和无限次单张压缩。支付一次，永久使用。</div>
     <div class="modal-price">$10</div>
     <div class="modal-price-desc">一次付费 · 永久有效 · 无月费</div>
     <div class="modal-features">
-      <div class="modal-feature">无限次图片压缩</div>
-      <div class="modal-feature">精确压缩到任意指定大小</div>
+      <div class="modal-feature">批量图片压缩</div>
+      <div class="modal-feature">无限次单张图片压缩</div>
       <div class="modal-feature">浏览器本地处理，完全私密</div>
       <div class="modal-feature">支持 JPG / PNG / WebP</div>
     </div>
@@ -275,6 +323,9 @@ const PAYPAL_PAYMENT_LINK = 'https://www.paypal.com/ncp/payment/LN55VSJYNE252';
 
 let f = null;
 let usedCount = parseInt(localStorage.getItem(STORAGE_KEY) || '0');
+let activeTool = 'compress';
+let outputType = 'image/jpeg';
+let outputLabel = 'JPG';
 
 const dz = document.getElementById('dz');
 const fi = document.getElementById('fi');
@@ -284,6 +335,11 @@ const pname = document.getElementById('pname');
 const psize = document.getElementById('psize');
 const btn = document.getElementById('btn');
 const st = document.getElementById('st');
+const dropHint = document.getElementById('dropHint');
+const singleTool = document.getElementById('singleTool');
+const batchPanel = document.getElementById('batchPanel');
+const compressControls = document.getElementById('compressControls');
+const convertControls = document.getElementById('convertControls');
 
 updateQuota();
 
@@ -292,6 +348,35 @@ dz.ondragover = e => { e.preventDefault(); dz.classList.add('over'); };
 dz.ondragleave = () => dz.classList.remove('over');
 dz.ondrop = e => { e.preventDefault(); dz.classList.remove('over'); if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); };
 fi.onchange = e => { if (e.target.files[0]) load(e.target.files[0]); };
+
+function switchTool(tool) {
+  activeTool = tool;
+  document.querySelectorAll('.tool-tab').forEach(tab => tab.classList.remove('on'));
+  document.getElementById('tab-' + tool).classList.add('on');
+  singleTool.classList.toggle('hidden', tool === 'batch');
+  batchPanel.classList.toggle('show', tool === 'batch');
+
+  if (tool === 'batch') {
+    st.className = 'status';
+    return;
+  }
+
+  compressControls.classList.toggle('hidden', tool !== 'compress');
+  convertControls.classList.toggle('hidden', tool !== 'convert');
+  dropHint.textContent = tool === 'convert'
+    ? '免费转换 JPG · PNG · WebP · 图片不上传服务器'
+    : 'JPG · PNG · WebP · 本地处理，不上传服务器';
+  st.className = 'status';
+  updateButtonText();
+}
+
+function runTool() {
+  if (activeTool === 'convert') {
+    convertImage();
+    return;
+  }
+  compress();
+}
 
 function load(file) {
   if (!file.type.startsWith('image/')) { showStatus('err', '请选择图片文件'); return; }
@@ -306,8 +391,18 @@ function load(file) {
   };
   r.readAsDataURL(file);
   btn.disabled = false;
-  btn.textContent = '开始压缩 →';
+  updateButtonText();
   st.className = 'status';
+}
+
+function updateButtonText() {
+  if (!f) {
+    btn.textContent = '选择图片后开始';
+    btn.disabled = true;
+    return;
+  }
+  btn.disabled = false;
+  btn.textContent = activeTool === 'convert' ? '免费转换为 ' + outputLabel + ' →' : '开始压缩 →';
 }
 
 function setTarget(kb) {
@@ -316,6 +411,15 @@ function setTarget(kb) {
     const val = parseInt(b.textContent);
     b.classList.toggle('on', val === kb || (kb === 1024 && b.textContent.includes('1 MB')) || (kb === 2048 && b.textContent.includes('2 MB')));
   });
+}
+
+function setFormat(type, label) {
+  outputType = type;
+  outputLabel = label;
+  document.querySelectorAll('.format-option').forEach(b => {
+    b.classList.toggle('on', b.textContent.trim() === label);
+  });
+  updateButtonText();
 }
 
 function updateQuota() {
@@ -375,6 +479,29 @@ async function compress() {
   }
 }
 
+async function convertImage() {
+  if (!f) return;
+
+  btn.disabled = true;
+  btn.textContent = '转换中...';
+  showStatus('loading', '正在转换格式，请稍候...');
+
+  try {
+    const result = await convertInBrowser(f, outputType);
+    const resultKB = (result.size / 1024).toFixed(1);
+    const ext = outputType === 'image/png' ? '.png' : outputType === 'image/webp' ? '.webp' : '.jpg';
+    const base = f.name.replace(/\.[^.]+$/, '');
+    downloadBlob(result, 'converted_' + base + ext);
+    showStatus('ok', '已转换为 ' + outputLabel + ' · ' + resultKB + ' KB · 已自动下载');
+    psize.textContent = '已转换为：' + outputLabel + ' · ' + resultKB + ' KB';
+  } catch (e) {
+    showStatus('err', '转换失败，请重试');
+  } finally {
+    btn.disabled = false;
+    updateButtonText();
+  }
+}
+
 // 浏览器端二分法压缩
 function compressInBrowser(file, targetBytes) {
   return new Promise((resolve, reject) => {
@@ -427,6 +554,40 @@ function compressInBrowser(file, targetBytes) {
     img.onerror = reject;
     img.src = url;
   });
+}
+
+function convertInBrowser(file, type) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      if (type === 'image/jpeg') {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+      ctx.drawImage(img, 0, 0);
+      canvas.toBlob(blob => {
+        if (!blob) { reject(new Error('Failed')); return; }
+        resolve(blob);
+      }, type, 0.92);
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.download = filename;
+  a.href = url;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function showPaywall() {
