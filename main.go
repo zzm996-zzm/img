@@ -257,6 +257,7 @@ func renderHomeHTML(page publicPage) string {
 		"__PAGE_INTRO__", html.EscapeString(page.Intro),
 		"__IMAGE_TOOL_LINKS__", homeToolCardsHTML("image"),
 		"__UTILITY_TOOL_LINKS__", homeToolCardsHTML("utility"),
+		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
 	).Replace(homeHTML)
 }
 
@@ -304,6 +305,7 @@ func renderLandingHTML(page publicPage) string {
 		"__RELATED_LINKS__", relatedLinksHTML(page),
 		"__QR_SCRIPT__", qrScriptTag(page),
 		"__LANDING_SCRIPT__", landingScript(page),
+		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
 	).Replace(landingHTML)
 }
 
@@ -314,6 +316,16 @@ func qrScriptTag(page publicPage) string {
 	return ""
 }
 
+const googleAnalyticsTag = `<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-GRDT3349BV"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-GRDT3349BV');
+</script>`
+
 const homeHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -323,6 +335,7 @@ const homeHTML = `<!DOCTYPE html>
 <meta name="description" content="__PAGE_DESCRIPTION__">
 <link rel="canonical" href="__CANONICAL_URL__">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+__GOOGLE_ANALYTICS__
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#101113;--panel:#18191d;--panel2:#202126;--line:rgba(255,255,255,.09);--text:#f4f1e8;--muted:#9b988e;--accent:#d4ff57}
@@ -658,6 +671,7 @@ const landingHTML = `<!DOCTYPE html>
 <meta name="description" content="__PAGE_DESCRIPTION__">
 <link rel="canonical" href="__CANONICAL_URL__">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+__GOOGLE_ANALYTICS__
 __QR_SCRIPT__
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}

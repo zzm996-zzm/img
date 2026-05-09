@@ -284,6 +284,8 @@ func TestHandleIndexRendersUtilityLandingPage(t *testing.T) {
 		"<title>CSV to JSON Converter | Free Online CSV JSON Tool</title>",
 		"<h1>CSV to JSON converter<em>convert CSV text into JSON</em></h1>",
 		`<link rel="canonical" href="https://onlinebox.site/csv-to-json">`,
+		`https://www.googletagmanager.com/gtag/js?id=G-GRDT3349BV`,
+		`gtag('config', 'G-GRDT3349BV')`,
 		`function convertCSV()`,
 		"How to use the CSV to JSON converter",
 		"When should you convert CSV to JSON?",
@@ -359,6 +361,7 @@ func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 	for _, expected := range []string{
 		`<html lang="en">`,
 		"<title>OnlineBox | Free Browser Tools for Images, Data and Creators</title>",
+		`https://www.googletagmanager.com/gtag/js?id=G-GRDT3349BV`,
 		"Free browser tools",
 		"Image tools",
 		"Data and creator tools",
