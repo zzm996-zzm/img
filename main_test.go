@@ -307,6 +307,41 @@ func TestHandleIndexRendersUtilityLandingPage(t *testing.T) {
 	}
 }
 
+func TestHandleIndexRendersFreeBatchCompressor(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/batch-image-compressor", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>Batch Image Compressor | Compress Multiple Images Online</title>",
+		"<h1>Batch image compressor<em>compress multiple images locally</em></h1>",
+		`multiple onchange="loadBatchFiles(this.files)"`,
+		`function compressBatchImages()`,
+		"How to use the batch image compressor",
+		"Compress batch",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected body to contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{
+		"PRO TOOL",
+		"planned for Pro",
+		"unlock batch",
+		"Use the free single-image compressor first",
+	} {
+		if strings.Contains(body, unexpected) {
+			t.Fatalf("expected batch page to omit %q", unexpected)
+		}
+	}
+}
+
 func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 	t.Setenv("SITE_URL", "https://onlinebox.site/")
 	req := httptest.NewRequest(http.MethodGet, "/", nil)

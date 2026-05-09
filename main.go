@@ -113,10 +113,10 @@ var publicPages = []publicPage{
 	{
 		Path:        "/batch-image-compressor",
 		Title:       "Batch Image Compressor | Compress Multiple Images Online",
-		Description: "Batch image compression for product photos, documents and social media assets. Start with free single-image compression and unlock batch workflows later.",
+		Description: "Compress multiple JPG, PNG and WebP images online with one target size. Batch image compression runs locally in your browser.",
 		Heading:     "Batch image compressor",
-		Accent:      "compress multiple images faster",
-		Intro:       "A batch compression workflow for product photos, documents and social media assets. Free single-image tools are available now, with batch processing planned for Pro.",
+		Accent:      "compress multiple images locally",
+		Intro:       "Select multiple images, choose a target file size and download compressed JPG files one by one. Useful for product photos, documents and social media batches.",
 		Kind:        "image",
 		PageTool:    "batch",
 	},
@@ -384,7 +384,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(42px,7vw,78px);line-height:.98;
 <section class="faq">
 <h2>FAQ</h2>
 <div>
-<details open><summary>Is OnlineBox free?</summary><p>Yes. The current tools are free to use. Some batch workflows or advanced templates may become Pro features later.</p></details>
+<details open><summary>Is OnlineBox free?</summary><p>Yes. The current tools are free to use, including batch image compression. Advanced templates or heavier workflows may be added later, but the core browser tools stay easy to try.</p></details>
 <details><summary>Do files upload to a server?</summary><p>Most tools are designed to run locally in your browser. The server mainly delivers the page.</p></details>
 <details><summary>Why are tools on separate pages?</summary><p>Separate pages are better for users and search engines because each page can focus on one task, one title and one set of instructions.</p></details>
 </div>
@@ -456,10 +456,15 @@ Bob,bob@example.com,pro</textarea>
 		return imageToolHTML("Output size", `<div class="grid two"><input id="resizeW" type="number" value="200" min="1" max="12000" aria-label="Width"><input id="resizeH" type="number" value="200" min="1" max="12000" aria-label="Height"></div><div class="choices"><button class="chip on" onclick="setResizeMode('contain',this)">Contain</button><button class="chip" onclick="setResizeMode('cover',this)">Cover</button><button class="chip" onclick="setResizeMode('stretch',this)">Stretch</button></div>`, "Resize image", "resizeImage()")
 	case "batch":
 		return `<section class="tool-panel">
-<div class="pro-kicker">PRO TOOL</div>
-<h2>Batch image compressor</h2>
-<p>Compress multiple images with the same target settings. This is designed for product photos, documents and social media assets.</p>
-<a class="btn link-btn" href="/image-compressor">Use the free single-image compressor first</a>
+<label for="batchInput">Choose images</label>
+<input id="batchInput" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="loadBatchFiles(this.files)">
+<div id="batchInfo" class="hint">Select multiple JPG, PNG or WebP images. Files are compressed locally in your browser.</div>
+<label for="batchTargetKB">Target file size per image</label>
+<div class="grid unit"><input id="batchTargetKB" type="number" value="200" min="10" max="20000"><span>KB</span></div>
+<div class="choices"><button class="chip" onclick="setBatchTarget(100)">100 KB</button><button class="chip on" onclick="setBatchTarget(200)">200 KB</button><button class="chip" onclick="setBatchTarget(500)">500 KB</button><button class="chip" onclick="setBatchTarget(1024)">1 MB</button></div>
+<button class="btn" onclick="compressBatchImages()">Compress batch</button>
+<div id="batchStatus" class="hint"></div>
+<pre id="batchOutput" class="output"></pre>
 </section>`
 	default:
 		return imageToolHTML("Target file size", `<div class="grid unit"><input id="targetKB" type="number" value="200" min="10" max="20000"><span>KB</span></div><div class="choices"><button class="chip" onclick="setTarget(100)">100 KB</button><button class="chip on" onclick="setTarget(200)">200 KB</button><button class="chip" onclick="setTarget(500)">500 KB</button><button class="chip" onclick="setTarget(1024)">1 MB</button></div>`, "Compress image", "compressImage()")
@@ -523,6 +528,8 @@ func landingGuideHTML(page publicPage) string {
 		return imageGuideHTML("image converter", "Choose JPG, PNG or WebP as the output format, upload an image and click Convert image. The converted file downloads automatically.", "It is useful when you need to turn a PNG into JPG, create WebP assets for the web or fix an incompatible image format.")
 	case "/image-resizer":
 		return imageGuideHTML("image resizer", "Enter the target width and height, choose contain, cover or stretch mode, then upload an image and resize it.", "It is useful for avatars, product photos, social covers, form uploads and fixed-ratio design assets.")
+	case "/batch-image-compressor":
+		return imageGuideHTML("batch image compressor", "Select multiple JPG, PNG or WebP images, choose a target size per image, then click Compress batch. Each compressed file downloads separately as it finishes.", "It is useful when you need to prepare product photos, document scans, marketplace images or social media assets with the same file-size limit.")
 	case "/qr-code-generator":
 		return utilityGuideHTML("QR code generator", "Enter a link or text, choose foreground and background colors, generate the QR code and download it as PNG.", "It is useful for campaign links, menus, social profiles, business cards and printed materials.")
 	case "/markdown-to-pdf":
@@ -571,7 +578,7 @@ func landingScript(page publicPage) string {
 		return utilityLandingScript(page.PageUtility)
 	}
 	if page.PageTool == "batch" {
-		return ""
+		return batchImageLandingScript()
 	}
 	return imageLandingScript()
 }
@@ -619,6 +626,18 @@ function imageToBlob(canvas,type,quality){return new Promise(resolve=>canvas.toB
 async function compressImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const targetBytes=(parseFloat(document.getElementById('targetKB').value)||200)*1024;const canvas=document.getElementById('imageCanvas');let low=.02,high=.95,best=null;for(let i=0;i<10;i++){const q=(low+high)/2;const blob=await imageToBlob(canvas,'image/jpeg',q);if(blob.size<=targetBytes){best=blob;low=q;}else{high=q;}}if(!best)best=await imageToBlob(canvas,'image/jpeg',.02);downloadBlob(best,'compressed_'+selectedFile.name.replace(/\.[^.]+$/,'')+'.jpg');setStatus('Compressed to '+(best.size/1024).toFixed(1)+' KB');}
 async function convertImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const canvas=document.getElementById('imageCanvas');const ctx=canvas.getContext('2d');if(outputType==='image/jpeg'){ctx.globalCompositeOperation='destination-over';ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalCompositeOperation='source-over';}const blob=await imageToBlob(canvas,outputType,.92);const ext=outputType==='image/png'?'.png':outputType==='image/webp'?'.webp':'.jpg';downloadBlob(blob,'converted_'+selectedFile.name.replace(/\.[^.]+$/,'')+ext);setStatus('Converted to '+outputLabel+' · '+(blob.size/1024).toFixed(1)+' KB');}
 async function resizeImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const width=parseInt(document.getElementById('resizeW').value,10),height=parseInt(document.getElementById('resizeH').value,10);if(!width||!height){setStatus('Enter a valid width and height');return;}const canvas=document.getElementById('imageCanvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);let sx=0,sy=0,sw=selectedImage.naturalWidth,sh=selectedImage.naturalHeight,dx=0,dy=0,dw=width,dh=height;if(resizeMode==='contain'){const scale=Math.min(width/sw,height/sh);dw=sw*scale;dh=sh*scale;dx=(width-dw)/2;dy=(height-dh)/2;}else if(resizeMode==='cover'){const target=width/height,ratio=sw/sh;if(ratio>target){sw=sh*target;sx=(selectedImage.naturalWidth-sw)/2;}else{sh=sw/target;sy=(selectedImage.naturalHeight-sh)/2;}}ctx.drawImage(selectedImage,sx,sy,sw,sh,dx,dy,dw,dh);const blob=await imageToBlob(canvas,'image/jpeg',.92);downloadBlob(blob,'resized_'+selectedFile.name.replace(/\.[^.]+$/,'')+'_'+width+'x'+height+'.jpg');setStatus('Resized to '+width+'x'+height+' · '+(blob.size/1024).toFixed(1)+' KB');}`
+}
+
+func batchImageLandingScript() string {
+	return `let batchFiles=[];
+function setBatchStatus(msg){document.getElementById('batchStatus').textContent=msg;}
+function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
+function imageToBlob(canvas,type,quality){return new Promise(resolve=>canvas.toBlob(resolve,type,quality));}
+function loadBatchFiles(files){batchFiles=Array.from(files||[]).filter(file=>file.type&&file.type.startsWith('image/'));document.getElementById('batchInfo').textContent=batchFiles.length?batchFiles.length+' image(s) selected. They will be processed locally.':'Select multiple JPG, PNG or WebP images.';document.getElementById('batchOutput').textContent='';}
+function setBatchTarget(kb){document.getElementById('batchTargetKB').value=kb;}
+function loadImage(file){return new Promise((resolve,reject)=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);resolve(img);};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Could not load '+file.name));};img.src=url;});}
+async function compressFileToTarget(file,targetBytes){const img=await loadImage(file);const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);let low=.02,high=.95,best=null;for(let i=0;i<10;i++){const q=(low+high)/2;const blob=await imageToBlob(canvas,'image/jpeg',q);if(blob.size<=targetBytes){best=blob;low=q;}else{high=q;}}if(!best)best=await imageToBlob(canvas,'image/jpeg',.02);return best;}
+async function compressBatchImages(){if(!batchFiles.length){setBatchStatus('Choose images first');return;}const targetKB=parseFloat(document.getElementById('batchTargetKB').value)||200;if(targetKB<=0){setBatchStatus('Enter a valid target size');return;}const targetBytes=targetKB*1024;const output=document.getElementById('batchOutput');output.textContent='';let done=0;for(const file of batchFiles){setBatchStatus('Compressing '+(done+1)+' of '+batchFiles.length+'...');try{const blob=await compressFileToTarget(file,targetBytes);const base=file.name.replace(/\.[^.]+$/,'');downloadBlob(blob,'compressed_'+base+'.jpg');done++;output.textContent+=file.name+' -> '+(blob.size/1024).toFixed(1)+' KB\n';}catch(err){output.textContent+=file.name+' -> failed\n';}}setBatchStatus('Finished '+done+' of '+batchFiles.length+' image(s).');}`
 }
 
 const landingHTML = `<!DOCTYPE html>
