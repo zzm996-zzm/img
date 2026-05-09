@@ -244,13 +244,13 @@ func TestHandleIndexRendersRouteSpecificSEO(t *testing.T) {
 	}
 	body := rr.Body.String()
 	for _, expected := range []string{
-		"<title>图片格式转换 | 免费 JPG PNG WebP 在线互转</title>",
-		"<h1>图片格式转换<em>JPG、PNG、WebP 免费互转</em></h1>",
+		"<title>Image Converter | Convert JPG PNG WebP Online</title>",
+		"<h1>Image converter<em>convert JPG, PNG and WebP online</em></h1>",
 		`<link rel="canonical" href="https://onlinebox.site/image-converter">`,
 		`function convertImage()`,
-		"如何使用图片格式转换？",
-		"图片格式转换适合哪些场景？",
-		"常见问题",
+		"How to use the image converter",
+		"When is the image converter useful?",
+		"FAQ",
 		`href="/image-compressor"`,
 	} {
 		if !strings.Contains(body, expected) {
@@ -258,9 +258,10 @@ func TestHandleIndexRendersRouteSpecificSEO(t *testing.T) {
 		}
 	}
 	for _, unexpected := range []string{
-		"CSV内容",
-		"Markdown 导出 PDF",
+		"CSV input",
+		"Markdown input",
 		"Creator Tools",
+		"如何使用",
 	} {
 		if strings.Contains(body, unexpected) {
 			t.Fatalf("expected focused page to omit %q", unexpected)
@@ -280,13 +281,13 @@ func TestHandleIndexRendersUtilityLandingPage(t *testing.T) {
 	}
 	body := rr.Body.String()
 	for _, expected := range []string{
-		"<title>CSV 转 JSON | 免费在线表格数据转换</title>",
-		"<h1>CSV 转 JSON<em>免费在线表格数据转换</em></h1>",
+		"<title>CSV to JSON Converter | Free Online CSV JSON Tool</title>",
+		"<h1>CSV to JSON converter<em>convert CSV text into JSON</em></h1>",
 		`<link rel="canonical" href="https://onlinebox.site/csv-to-json">`,
 		`function convertCSV()`,
-		"如何使用 CSV 转 JSON 工具",
-		"CSV 转 JSON 适合哪些场景？",
-		"CSV 转 JSON 常见问题",
+		"How to use the CSV to JSON converter",
+		"When should you convert CSV to JSON?",
+		"CSV to JSON FAQ",
 		`href="/image-compressor"`,
 	} {
 		if !strings.Contains(body, expected) {
@@ -298,9 +299,45 @@ func TestHandleIndexRendersUtilityLandingPage(t *testing.T) {
 		`id="markdownInput"`,
 		"Live Browser Tools",
 		"本页面只围绕",
+		"如何使用",
 	} {
 		if strings.Contains(body, unexpected) {
 			t.Fatalf("expected focused page to omit %q", unexpected)
+		}
+	}
+}
+
+func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		`<html lang="en">`,
+		"<title>OnlineBox | Free Browser Tools for Images, Data and Creators</title>",
+		"Free browser tools",
+		"Image tools",
+		"Data and creator tools",
+		`href="/csv-to-json"`,
+		`href="/image-compressor"`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected home body to contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{
+		`id="csvInput"`,
+		`id="qrText"`,
+		"免费在线工具集",
+	} {
+		if strings.Contains(body, unexpected) {
+			t.Fatalf("expected directory home to omit %q", unexpected)
 		}
 	}
 }

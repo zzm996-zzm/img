@@ -72,105 +72,105 @@ type publicPage struct {
 var publicPages = []publicPage{
 	{
 		Path:        "/",
-		Title:       "免费在线工具集 | 图片压缩、格式转换、尺寸转换、二维码与数据工具",
-		Description: "免费在线浏览器工具集，支持图片压缩、格式转换、尺寸转换、批量压缩、二维码生成、社交媒体卡片、CSV转JSON和Markdown转PDF。核心处理在浏览器本地完成。",
-		Heading:     "免费在线工具集",
-		Accent:      "图片、创作与数据处理",
-		Intro:       "压缩图片、转换格式、调整尺寸，并逐步加入二维码、社交媒体卡片、CSV转JSON和Markdown转PDF。核心处理在浏览器本地完成，尽量不占服务器算力。",
+		Title:       "OnlineBox | Free Browser Tools for Images, Data and Creators",
+		Description: "Free online browser tools for image compression, image conversion, resizing, QR codes, CSV to JSON, Markdown to PDF and creator utilities. Most tools run locally in your browser.",
+		Heading:     "Free browser tools",
+		Accent:      "for images, data and creators",
+		Intro:       "A focused collection of lightweight tools that run in your browser. Compress images, convert files, generate QR codes, format data and create shareable assets without installing anything.",
 		Kind:        "home",
 		PageTool:    "compress",
 	},
 	{
 		Path:        "/image-compressor",
-		Title:       "图片压缩到指定KB | 免费在线压缩 JPG PNG WebP",
-		Description: "免费在线图片压缩工具，可把 JPG、PNG、WebP 压缩到 200KB、500KB、1MB 等指定大小。浏览器本地处理，图片不上传服务器。",
-		Heading:     "图片压缩到指定KB",
-		Accent:      "JPG、PNG、WebP 本地处理",
-		Intro:       "上传图片后输入目标大小，例如 200KB、500KB 或 1MB，浏览器会在本地压缩并自动下载，不需要上传服务器。",
+		Title:       "Image Compressor to 200KB | Free Online JPG PNG WebP Tool",
+		Description: "Compress JPG, PNG and WebP images to a target size such as 200KB, 500KB or 1MB. The image is processed locally in your browser.",
+		Heading:     "Image compressor",
+		Accent:      "compress images to a target KB size",
+		Intro:       "Upload an image, choose a target file size and download a smaller JPG. Useful for forms, applications, ecommerce uploads and social media images.",
 		Kind:        "image",
 		PageTool:    "compress",
 	},
 	{
 		Path:        "/image-converter",
-		Title:       "图片格式转换 | 免费 JPG PNG WebP 在线互转",
-		Description: "在线转换图片格式，支持 JPG、PNG、WebP 互转。直接在浏览器本地完成格式转换，适合网页、电商和社交媒体图片处理。",
-		Heading:     "图片格式转换",
-		Accent:      "JPG、PNG、WebP 免费互转",
-		Intro:       "选择图片后即可转换为 JPG、PNG 或 WebP。适合网页素材、电商图片和社交媒体发布前的格式处理。",
+		Title:       "Image Converter | Convert JPG PNG WebP Online",
+		Description: "Convert images between JPG, PNG and WebP online. The conversion runs in your browser and is useful for web, ecommerce and social media assets.",
+		Heading:     "Image converter",
+		Accent:      "convert JPG, PNG and WebP online",
+		Intro:       "Choose an image and convert it to JPG, PNG or WebP. A simple browser-based converter for publishing, uploads and quick format fixes.",
 		Kind:        "image",
 		PageTool:    "convert",
 	},
 	{
 		Path:        "/image-resizer",
-		Title:       "图片尺寸转换 | 在线调整图片宽高和头像尺寸",
-		Description: "免费在线调整图片尺寸，支持自定义宽高、头像尺寸、平台上传尺寸、留白适配、裁剪填满和拉伸模式。",
-		Heading:     "图片尺寸转换",
-		Accent:      "头像、社媒和上传尺寸",
-		Intro:       "输入目标宽高，选择留白适配、裁剪填满或拉伸模式，快速生成头像、电商图和平台上传需要的尺寸。",
+		Title:       "Image Resizer | Resize Images Online by Width and Height",
+		Description: "Resize images online with custom width and height. Choose contain, cover or stretch mode for avatars, product images and platform uploads.",
+		Heading:     "Image resizer",
+		Accent:      "resize images by width and height",
+		Intro:       "Enter the target width and height, choose how the image should fit, and download a resized JPG for avatars, product listings and upload requirements.",
 		Kind:        "image",
 		PageTool:    "resize",
 	},
 	{
 		Path:        "/batch-image-compressor",
-		Title:       "批量图片压缩 | 多张图片统一压缩处理",
-		Description: "批量图片压缩工具入口，适合电商图、资料图和社交媒体素材统一处理。基础图片工具在浏览器本地运行，Pro 解锁批量能力。",
-		Heading:     "批量图片压缩",
-		Accent:      "多张图片统一处理",
-		Intro:       "面向电商图、资料图和社媒素材的批量处理入口。免费工具可先处理单张图片，Pro 解锁批量能力。",
+		Title:       "Batch Image Compressor | Compress Multiple Images Online",
+		Description: "Batch image compression for product photos, documents and social media assets. Start with free single-image compression and unlock batch workflows later.",
+		Heading:     "Batch image compressor",
+		Accent:      "compress multiple images faster",
+		Intro:       "A batch compression workflow for product photos, documents and social media assets. Free single-image tools are available now, with batch processing planned for Pro.",
 		Kind:        "image",
 		PageTool:    "batch",
 	},
 	{
 		Path:        "/qr-code-generator",
-		Title:       "二维码生成器 | 免费在线生成二维码 PNG",
-		Description: "免费在线二维码生成器，可输入链接或文本，自定义前景色和背景色，并下载 PNG 图片。适合活动页、社交媒体和运营素材。",
-		Heading:     "二维码生成器",
-		Accent:      "免费生成 PNG 二维码",
-		Intro:       "输入链接或文本，自定义前景色和背景色，直接在浏览器中生成二维码并下载 PNG 图片。",
+		Title:       "QR Code Generator | Free Online QR Code PNG",
+		Description: "Generate a QR code online from a link or text, customize colors and download a PNG image for campaigns, menus, profiles and print materials.",
+		Heading:     "QR code generator",
+		Accent:      "create a free PNG QR code",
+		Intro:       "Enter a URL or text, choose foreground and background colors, then download a PNG QR code for print, campaigns, menus and social profiles.",
 		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "qr",
 	},
 	{
 		Path:        "/social-card-maker",
-		Title:       "社交媒体卡片制作 | 在线生成分享图片",
-		Description: "在线制作社交媒体分享卡片，输入标题、副标题和强调色，在浏览器中生成适合分享的图片素材。",
-		Heading:     "社交媒体卡片制作",
-		Accent:      "在线生成分享图片",
-		Intro:       "输入标题、副标题和强调色，本地生成一张适合社交媒体分享的图片素材。",
+		Title:       "Social Card Maker | Create Social Sharing Images Online",
+		Description: "Create a simple social sharing card online. Add a title, subtitle and accent color, then download a 1200x630 image.",
+		Heading:     "Social card maker",
+		Accent:      "create share images online",
+		Intro:       "Create a clean 1200x630 social sharing image from a title, subtitle and accent color. Useful for blog posts, product updates and launch notes.",
 		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "social",
 	},
 	{
 		Path:        "/gradient-generator",
-		Title:       "渐变配色生成器 | 免费生成 CSS Gradient",
-		Description: "免费在线生成配色和 CSS 渐变代码，适合网页背景、社交媒体素材、设计稿和落地页视觉探索。",
-		Heading:     "渐变配色生成器",
-		Accent:      "免费生成 CSS Gradient",
-		Intro:       "随机生成配色和 CSS 渐变代码，适合网页背景、社交媒体素材、设计稿和落地页视觉探索。",
+		Title:       "Gradient Generator | Generate CSS Gradients Online",
+		Description: "Generate random CSS gradients and color combinations for web backgrounds, social assets, landing pages and quick design exploration.",
+		Heading:     "Gradient generator",
+		Accent:      "generate CSS gradients online",
+		Intro:       "Generate a CSS gradient, preview the result and copy the background code for websites, cards, banners and design experiments.",
 		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "gradient",
 	},
 	{
 		Path:        "/csv-to-json",
-		Title:       "CSV 转 JSON | 免费在线表格数据转换",
-		Description: "在线把 CSV 内容转换成 JSON，支持带表头的表格数据解析。转换在浏览器本地完成，适合开发、运营和数据整理。",
-		Heading:     "CSV 转 JSON",
-		Accent:      "免费在线表格数据转换",
-		Intro:       "粘贴带表头的 CSV 内容，在浏览器本地转换成 JSON。适合开发调试、运营表格整理和轻量数据清洗。",
+		Title:       "CSV to JSON Converter | Free Online CSV JSON Tool",
+		Description: "Convert CSV text to JSON online. Paste CSV with headers and get formatted JSON for API testing, imports, data cleanup and mock data.",
+		Heading:     "CSV to JSON converter",
+		Accent:      "convert CSV text into JSON",
+		Intro:       "Paste CSV with a header row and convert it into formatted JSON. Useful for API testing, import preparation, data cleanup and front-end mock data.",
 		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "csv",
 	},
 	{
 		Path:        "/markdown-to-pdf",
-		Title:       "Markdown 转 PDF | 免费在线预览并打印 PDF",
-		Description: "在线把 Markdown 转成可打印预览，并使用浏览器导出 PDF。适合项目笔记、文档草稿和轻量内容排版。",
-		Heading:     "Markdown 转 PDF",
-		Accent:      "免费在线预览并打印 PDF",
-		Intro:       "把 Markdown 转成可打印预览，再使用浏览器导出 PDF。适合项目笔记、文档草稿和轻量内容排版。",
+		Title:       "Markdown to PDF | Free Markdown Preview and PDF Export",
+		Description: "Convert Markdown to a printable preview and export it as PDF from your browser. Useful for notes, drafts and lightweight documentation.",
+		Heading:     "Markdown to PDF",
+		Accent:      "preview Markdown and print PDF",
+		Intro:       "Paste Markdown, preview the formatted result and use your browser print dialog to save it as PDF for notes, drafts and lightweight documents.",
 		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "markdown",
@@ -244,26 +244,47 @@ func renderIndexHTML(page publicPage) string {
 	if page.Path != "/" {
 		return renderLandingHTML(page)
 	}
-	canonical := siteURL() + page.Path
-	if page.Path == "/" {
-		canonical = siteURL() + "/"
+	return renderHomeHTML(page)
+}
+
+func renderHomeHTML(page publicPage) string {
+	return strings.NewReplacer(
+		"__PAGE_TITLE__", html.EscapeString(page.Title),
+		"__PAGE_DESCRIPTION__", html.EscapeString(page.Description),
+		"__CANONICAL_URL__", html.EscapeString(siteURL()+"/"),
+		"__PAGE_HEADING__", html.EscapeString(page.Heading),
+		"__PAGE_ACCENT__", html.EscapeString(page.Accent),
+		"__PAGE_INTRO__", html.EscapeString(page.Intro),
+		"__IMAGE_TOOL_LINKS__", homeToolCardsHTML("image"),
+		"__UTILITY_TOOL_LINKS__", homeToolCardsHTML("utility"),
+	).Replace(homeHTML)
+}
+
+func homeToolCardsHTML(kind string) string {
+	var cards []string
+	for _, page := range publicPages {
+		if page.Path == "/" || page.Kind != kind {
+			continue
+		}
+		cards = append(cards, fmt.Sprintf(
+			`<a class="tool-card" href="%s"><span>%s</span><strong>%s</strong><small>%s</small></a>`,
+			html.EscapeString(page.Path),
+			html.EscapeString(toolLabel(page)),
+			html.EscapeString(page.Heading),
+			html.EscapeString(page.Intro),
+		))
 	}
-	replacements := map[string]string{
-		"__PAGE_TITLE__":       html.EscapeString(page.Title),
-		"__PAGE_DESCRIPTION__": html.EscapeString(page.Description),
-		"__CANONICAL_URL__":    html.EscapeString(canonical),
-		"__PAGE_HEADING__":     html.EscapeString(page.Heading),
-		"__PAGE_ACCENT__":      html.EscapeString(page.Accent),
-		"__PAGE_INTRO__":       html.EscapeString(page.Intro),
-		"__PAGE_KIND__":        html.EscapeString(page.Kind),
-		"__PAGE_TOOL__":        jsString(page.PageTool),
-		"__PAGE_UTILITY__":     jsString(page.PageUtility),
+	return strings.Join(cards, "")
+}
+
+func toolLabel(page publicPage) string {
+	if page.Kind == "image" {
+		return "Image"
 	}
-	rendered := indexHTML
-	for from, to := range replacements {
-		rendered = strings.ReplaceAll(rendered, from, to)
+	if page.PageUtility == "csv" || page.PageUtility == "markdown" {
+		return "Data"
 	}
-	return rendered
+	return "Creator"
 }
 
 func renderLandingHTML(page publicPage) string {
@@ -293,20 +314,99 @@ func qrScriptTag(page publicPage) string {
 	return ""
 }
 
+const homeHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__PAGE_TITLE__</title>
+<meta name="description" content="__PAGE_DESCRIPTION__">
+<link rel="canonical" href="__CANONICAL_URL__">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#101113;--panel:#18191d;--panel2:#202126;--line:rgba(255,255,255,.09);--text:#f4f1e8;--muted:#9b988e;--accent:#d4ff57}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background:linear-gradient(90deg,rgba(212,255,87,.08),transparent 38%),linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:auto,46px 46px,46px 46px;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:1060px;margin:0 auto;padding:38px 22px 76px}
+.nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:64px}
+.brand{font-family:'Syne',sans-serif;font-weight:800;color:var(--accent);text-decoration:none;font-size:19px}
+.nav-links{display:flex;gap:16px;flex-wrap:wrap}.nav-links a{color:var(--muted);text-decoration:none;font-size:13px;font-weight:700}
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:42px;align-items:end;margin-bottom:56px}
+.kicker{display:inline-flex;color:var(--accent);border:1px solid rgba(212,255,87,.28);background:rgba(212,255,87,.09);border-radius:999px;padding:6px 11px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px}
+h1{font-family:'Syne',sans-serif;font-size:clamp(42px,7vw,78px);line-height:.98;letter-spacing:0;margin-bottom:18px}h1 em{display:block;color:var(--accent);font-style:normal}
+.lead{color:var(--muted);font-size:17px;line-height:1.75;max-width:650px}.hero-panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px}
+.hero-panel strong{display:block;font-family:'Syne',sans-serif;font-size:22px;margin-bottom:12px}.hero-panel p{color:var(--muted);line-height:1.65}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}.quick a{border:1px solid var(--line);background:var(--panel2);border-radius:10px;color:var(--text);text-decoration:none;padding:12px;font-size:13px;font-weight:800}
+.section{margin-top:44px}.section-head{display:flex;justify-content:space-between;gap:24px;align-items:end;margin-bottom:16px}.section h2{font-family:'Syne',sans-serif;font-size:30px}.section p{color:var(--muted);line-height:1.65;max-width:520px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.tool-card{min-height:188px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;text-decoration:none;color:var(--text);display:flex;flex-direction:column;gap:10px;transition:transform .16s,border-color .16s}
+.tool-card:hover{transform:translateY(-2px);border-color:rgba(212,255,87,.4)}.tool-card span{align-self:flex-start;color:var(--accent);background:rgba(212,255,87,.09);border:1px solid rgba(212,255,87,.22);border-radius:999px;padding:4px 8px;font-size:10px;font-weight:800;text-transform:uppercase}
+.tool-card strong{font-family:'Syne',sans-serif;font-size:19px}.tool-card small{color:var(--muted);line-height:1.55;font-size:13px}
+.notes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}.note{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}.note b{display:block;margin-bottom:8px}.note p{font-size:13px;color:var(--muted);line-height:1.6}
+.faq{margin-top:54px;display:grid;grid-template-columns:.7fr 1fr;gap:26px}.faq h2{font-family:'Syne',sans-serif;font-size:30px}.faq details{border-top:1px solid var(--line);padding:16px 0}.faq summary{cursor:pointer;font-weight:800}.faq p{color:var(--muted);line-height:1.65;margin-top:10px}
+@media(max-width:820px){.hero,.faq{grid-template-columns:1fr}.grid,.notes,.quick{grid-template-columns:1fr}.nav{align-items:flex-start;gap:16px;flex-direction:column}.wrap{padding-top:26px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<nav class="nav">
+<a class="brand" href="/">OnlineBox</a>
+<div class="nav-links"><a href="#image-tools">Image tools</a><a href="#data-tools">Data tools</a><a href="#creator-tools">Creator tools</a></div>
+</nav>
+<section class="hero">
+<div>
+<div class="kicker">Browser-first tool directory</div>
+<h1>__PAGE_HEADING__<em>__PAGE_ACCENT__</em></h1>
+<p class="lead">__PAGE_INTRO__</p>
+</div>
+<aside class="hero-panel">
+<strong>Start with a focused tool</strong>
+<p>The homepage is only a directory. Each tool has its own page, keyword, instructions and FAQ.</p>
+<div class="quick"><a href="/csv-to-json">CSV to JSON</a><a href="/image-compressor">Compress image</a><a href="/qr-code-generator">QR code</a></div>
+</aside>
+</section>
+<section class="section" id="image-tools">
+<div class="section-head"><h2>Image tools</h2><p>Compress, convert and resize images for uploads, product listings, forms and social media.</p></div>
+<div class="grid">__IMAGE_TOOL_LINKS__</div>
+</section>
+<section class="section" id="data-tools">
+<div class="section-head"><h2>Data and creator tools</h2><p>Small utilities for developers, operators and creators who need quick browser-based helpers.</p></div>
+<div class="grid">__UTILITY_TOOL_LINKS__</div>
+</section>
+<section class="section">
+<div class="section-head"><h2>Why this site is simple</h2><p>Low-cost utility sites work best when each page solves one job clearly.</p></div>
+<div class="notes">
+<div class="note"><b>Focused pages</b><p>Every tool page targets one search intent instead of mixing unrelated tools into the same content.</p></div>
+<div class="note"><b>Browser local</b><p>Most tools run in the browser, keeping server cost low and making the experience fast for small files.</p></div>
+<div class="note"><b>Internal links</b><p>The homepage links to every tool page so search engines and users can discover the full toolkit.</p></div>
+</div>
+</section>
+<section class="faq">
+<h2>FAQ</h2>
+<div>
+<details open><summary>Is OnlineBox free?</summary><p>Yes. The current tools are free to use. Some batch workflows or advanced templates may become Pro features later.</p></details>
+<details><summary>Do files upload to a server?</summary><p>Most tools are designed to run locally in your browser. The server mainly delivers the page.</p></details>
+<details><summary>Why are tools on separate pages?</summary><p>Separate pages are better for users and search engines because each page can focus on one task, one title and one set of instructions.</p></details>
+</div>
+</section>
+</main>
+</body>
+</html>`
+
 func landingToolHTML(page publicPage) string {
 	switch page.PageUtility {
 	case "csv":
 		return `<section class="tool-panel">
-<label for="csvInput">CSV 内容</label>
+<label for="csvInput">CSV input</label>
 <textarea id="csvInput" spellcheck="false">name,email,plan
 Alice,alice@example.com,free
 Bob,bob@example.com,pro</textarea>
-<button class="btn" onclick="convertCSV()">转换为 JSON</button>
+<button class="btn" onclick="convertCSV()">Convert to JSON</button>
 <pre id="jsonOutput" class="output"></pre>
 </section>`
 	case "markdown":
 		return `<section class="tool-panel">
-<label for="markdownInput">Markdown 内容</label>
+<label for="markdownInput">Markdown input</label>
 <textarea id="markdownInput" spellcheck="false"># Project Notes
 
 ## Tools
@@ -314,63 +414,63 @@ Bob,bob@example.com,pro</textarea>
 - CSV to JSON
 
 **Export this page with browser print.**</textarea>
-<button class="btn" onclick="renderMarkdown(true)">预览并打印 PDF</button>
+<button class="btn" onclick="renderMarkdown(true)">Preview and print PDF</button>
 <div id="markdownPreview" class="output preview"></div>
 </section>`
 	case "qr":
 		return `<section class="tool-panel">
-<label for="qrText">二维码内容</label>
+<label for="qrText">QR code content</label>
 <textarea id="qrText">https://onlinebox.site/</textarea>
 <div class="grid two">
-<label>前景色<input id="qrDark" type="color" value="#0e0e11"></label>
-<label>背景色<input id="qrLight" type="color" value="#ffffff"></label>
+<label>Foreground color<input id="qrDark" type="color" value="#0e0e11"></label>
+<label>Background color<input id="qrLight" type="color" value="#ffffff"></label>
 </div>
-<button class="btn" onclick="generateQR()">生成二维码</button>
-<button class="ghost" onclick="downloadCanvas('qrCanvas','qrcode.png')">下载 PNG</button>
+<button class="btn" onclick="generateQR()">Generate QR code</button>
+<button class="ghost" onclick="downloadCanvas('qrCanvas','qrcode.png')">Download PNG</button>
 <div class="canvas-wrap"><canvas id="qrCanvas" width="260" height="260"></canvas></div>
 </section>`
 	case "social":
 		return `<section class="tool-panel">
-<label for="cardTitle">标题</label>
+<label for="cardTitle">Title</label>
 <input id="cardTitle" value="Browser Tool Suite">
-<label for="cardSubtitle">副标题</label>
+<label for="cardSubtitle">Subtitle</label>
 <input id="cardSubtitle" value="Compress, convert, resize and create useful assets locally.">
-<label for="cardAccent">强调色</label>
+<label for="cardAccent">Accent color</label>
 <input id="cardAccent" type="color" value="#d4ff57">
-<button class="btn" onclick="renderSocialCard(true)">生成并下载卡片</button>
+<button class="btn" onclick="renderSocialCard(true)">Generate and download card</button>
 <div class="canvas-wrap wide"><canvas id="socialCanvas" width="1200" height="630"></canvas></div>
 </section>`
 	case "gradient":
 		return `<section class="tool-panel">
-<label for="gradientDirection">方向</label>
+<label for="gradientDirection">Direction</label>
 <select id="gradientDirection"><option value="135deg">Diagonal</option><option value="90deg">Horizontal</option><option value="180deg">Vertical</option><option value="45deg">Soft angle</option></select>
-<button class="btn" onclick="generateGradient()">随机生成配色</button>
+<button class="btn" onclick="generateGradient()">Generate gradient</button>
 <div id="gradientPreview" class="gradient-preview"></div>
 <pre id="gradientCode" class="output"></pre>
 </section>`
 	}
 	switch page.PageTool {
 	case "convert":
-		return imageToolHTML("输出格式", `<div class="choices"><button class="chip on" onclick="setFormat('image/jpeg','JPG',this)">JPG</button><button class="chip" onclick="setFormat('image/png','PNG',this)">PNG</button><button class="chip" onclick="setFormat('image/webp','WebP',this)">WebP</button></div>`, "转换格式", "convertImage()")
+		return imageToolHTML("Output format", `<div class="choices"><button class="chip on" onclick="setFormat('image/jpeg','JPG',this)">JPG</button><button class="chip" onclick="setFormat('image/png','PNG',this)">PNG</button><button class="chip" onclick="setFormat('image/webp','WebP',this)">WebP</button></div>`, "Convert image", "convertImage()")
 	case "resize":
-		return imageToolHTML("输出尺寸", `<div class="grid two"><input id="resizeW" type="number" value="200" min="1" max="12000" aria-label="宽度"><input id="resizeH" type="number" value="200" min="1" max="12000" aria-label="高度"></div><div class="choices"><button class="chip on" onclick="setResizeMode('contain',this)">留白适配</button><button class="chip" onclick="setResizeMode('cover',this)">裁剪填满</button><button class="chip" onclick="setResizeMode('stretch',this)">拉伸</button></div>`, "调整尺寸", "resizeImage()")
+		return imageToolHTML("Output size", `<div class="grid two"><input id="resizeW" type="number" value="200" min="1" max="12000" aria-label="Width"><input id="resizeH" type="number" value="200" min="1" max="12000" aria-label="Height"></div><div class="choices"><button class="chip on" onclick="setResizeMode('contain',this)">Contain</button><button class="chip" onclick="setResizeMode('cover',this)">Cover</button><button class="chip" onclick="setResizeMode('stretch',this)">Stretch</button></div>`, "Resize image", "resizeImage()")
 	case "batch":
 		return `<section class="tool-panel">
 <div class="pro-kicker">PRO TOOL</div>
-<h2>批量图片压缩</h2>
-<p>一次选择多张图片，统一压缩到指定大小，适合电商图、证件资料、社媒素材和表单上传前的批处理。</p>
-<a class="btn link-btn" href="/">先使用免费单张压缩</a>
+<h2>Batch image compressor</h2>
+<p>Compress multiple images with the same target settings. This is designed for product photos, documents and social media assets.</p>
+<a class="btn link-btn" href="/image-compressor">Use the free single-image compressor first</a>
 </section>`
 	default:
-		return imageToolHTML("目标文件大小", `<div class="grid unit"><input id="targetKB" type="number" value="200" min="10" max="20000"><span>KB</span></div><div class="choices"><button class="chip" onclick="setTarget(100)">100 KB</button><button class="chip on" onclick="setTarget(200)">200 KB</button><button class="chip" onclick="setTarget(500)">500 KB</button><button class="chip" onclick="setTarget(1024)">1 MB</button></div>`, "开始压缩", "compressImage()")
+		return imageToolHTML("Target file size", `<div class="grid unit"><input id="targetKB" type="number" value="200" min="10" max="20000"><span>KB</span></div><div class="choices"><button class="chip" onclick="setTarget(100)">100 KB</button><button class="chip on" onclick="setTarget(200)">200 KB</button><button class="chip" onclick="setTarget(500)">500 KB</button><button class="chip" onclick="setTarget(1024)">1 MB</button></div>`, "Compress image", "compressImage()")
 	}
 }
 
 func imageToolHTML(label, controls, actionLabel, action string) string {
 	return `<section class="tool-panel">
-<label for="imageInput">选择图片</label>
+<label for="imageInput">Choose image</label>
 <input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" onchange="loadImageFile(this.files[0])">
-<div id="imageInfo" class="hint">支持 JPG、PNG、WebP。图片在浏览器本地处理。</div>
+<div id="imageInfo" class="hint">Supports JPG, PNG and WebP. The image is processed locally in your browser.</div>
 <label>` + label + `</label>
 ` + controls + `
 <button class="btn" onclick="` + action + `">` + actionLabel + `</button>
@@ -399,69 +499,69 @@ func landingGuideHTML(page publicPage) string {
 	switch page.Path {
 	case "/csv-to-json":
 		return `<section class="guide">
-<h2>如何使用 CSV 转 JSON 工具</h2>
+<h2>How to use the CSV to JSON converter</h2>
 <ol>
-<li>把带表头的 CSV 内容粘贴到输入框，例如 name,email,plan。</li>
-<li>点击“转换为 JSON”，工具会把第一行识别为字段名，把后续每一行转换成一个 JSON 对象。</li>
-<li>检查右侧或下方输出结果，确认字段名和数据行对应正确后再使用。</li>
+<li>Paste CSV text with a header row, for example name,email,plan.</li>
+<li>Click “Convert to JSON”. The first row becomes the field names and each following row becomes a JSON object.</li>
+<li>Check the formatted output before using it in an API request, import job or mock data file.</li>
 </ol>
-<h2>CSV 转 JSON 适合哪些场景？</h2>
-<p>CSV 转 JSON 常用于接口调试、运营表格整理、批量导入前的数据预处理、低代码工具配置和前端 mock 数据制作。这个工具适合处理简单表格：第一行是字段名，后面的每一行是数据。转换过程在浏览器本地完成，不需要把表格内容上传到服务器。</p>
-<h2>转换前需要注意什么？</h2>
-<p>建议先确认 CSV 第一行是清晰的英文或拼音字段名，例如 title、email、price、status。字段名为空时，工具会自动生成 field_0、field_1 这样的兜底字段。包含逗号的内容请使用英文双引号包裹，这样解析结果会更稳定。</p>
+<h2>When should you convert CSV to JSON?</h2>
+<p>CSV to JSON conversion is useful for API testing, preparing import data, cleaning small spreadsheets, building low-code configuration and creating front-end mock data. This tool is designed for simple CSV tables where the first row contains field names and every row after that contains values.</p>
+<h2>What should you check before converting?</h2>
+<p>Make sure the first row contains clear field names such as title, email, price or status. If a field name is empty, the converter uses a fallback name such as field_0. If a value contains a comma, wrap it in double quotes so the parser can keep it as one cell.</p>
 <section class="faq-block">
-<h2>CSV 转 JSON 常见问题</h2>
-<details open><summary>CSV 第一行必须是表头吗？</summary><p>建议必须有表头。工具会把第一行作为 JSON 对象的 key，如果没有表头，输出结果会缺少可读字段名。</p></details>
-<details><summary>数据会上传到服务器吗？</summary><p>不会。当前转换逻辑在浏览器里运行，输入内容不会因为转换操作发送到服务器。</p></details>
-<details><summary>支持带引号和逗号的 CSV 吗？</summary><p>支持常见的英文双引号写法，例如 "New York, USA" 会被识别为一个单元格。</p></details>
-<details><summary>可以转换 Excel 文件吗？</summary><p>当前页面处理的是粘贴后的 CSV 文本。如果你有 Excel 文件，可以先另存为 CSV，再复制内容到这里转换。</p></details>
+<h2>CSV to JSON FAQ</h2>
+<details open><summary>Does the first CSV row need to be a header?</summary><p>Yes, that is recommended. The converter uses the first row as JSON keys, so a header row makes the output readable.</p></details>
+<details><summary>Does the data upload to a server?</summary><p>No. The conversion runs in your browser and the pasted CSV is not sent to the server for conversion.</p></details>
+<details><summary>Can it handle quoted values and commas?</summary><p>It supports common double-quoted CSV values. For example, "New York, USA" is treated as one cell.</p></details>
+<details><summary>Can I convert an Excel file?</summary><p>This page accepts pasted CSV text. If you have an Excel file, export or save it as CSV first, then paste the CSV content here.</p></details>
 </section>
 </section>`
 	case "/image-compressor":
-		return imageGuideHTML("图片压缩到指定KB", "上传图片后输入目标大小，例如 200KB、500KB 或 1MB，然后点击开始压缩。工具会在浏览器中尝试用合适的 JPG 质量输出更小的文件。", "适合报名表、证件资料、招聘网站、电商后台和社交平台上传前压缩图片。")
+		return imageGuideHTML("image compressor", "Upload an image, enter a target size such as 200KB, 500KB or 1MB, then click Compress image. The tool tries to produce a smaller JPG while staying close to your target.", "It is useful for application forms, profile photos, ecommerce uploads, job portals and social media images.")
 	case "/image-converter":
-		return imageGuideHTML("图片格式转换", "选择 JPG、PNG 或 WebP 作为输出格式，再上传图片并点击转换。转换完成后会自动下载新格式图片。", "适合把 PNG 透明图转成 JPG、把网页图片转成 WebP，或把不兼容格式改成常见格式。")
+		return imageGuideHTML("image converter", "Choose JPG, PNG or WebP as the output format, upload an image and click Convert image. The converted file downloads automatically.", "It is useful when you need to turn a PNG into JPG, create WebP assets for the web or fix an incompatible image format.")
 	case "/image-resizer":
-		return imageGuideHTML("图片尺寸转换", "输入目标宽度和高度，选择留白适配、裁剪填满或拉伸，然后上传图片并转换尺寸。", "适合头像、商品主图、社媒封面、表单上传尺寸和固定比例素材处理。")
+		return imageGuideHTML("image resizer", "Enter the target width and height, choose contain, cover or stretch mode, then upload an image and resize it.", "It is useful for avatars, product photos, social covers, form uploads and fixed-ratio design assets.")
 	case "/qr-code-generator":
-		return utilityGuideHTML("二维码生成器", "输入链接或文本，选择前景色和背景色，点击生成后下载 PNG。", "适合活动链接、菜单链接、社交主页、名片和线下物料。")
+		return utilityGuideHTML("QR code generator", "Enter a link or text, choose foreground and background colors, generate the QR code and download it as PNG.", "It is useful for campaign links, menus, social profiles, business cards and printed materials.")
 	case "/markdown-to-pdf":
-		return utilityGuideHTML("Markdown 转 PDF", "粘贴 Markdown 文本，点击预览并打印 PDF，浏览器会打开打印窗口。", "适合项目笔记、说明文档、会议纪要和轻量排版。")
+		return utilityGuideHTML("Markdown to PDF", "Paste Markdown text, preview the formatted result and use the browser print dialog to save it as PDF.", "It is useful for project notes, documentation drafts, meeting notes and lightweight formatting.")
 	case "/social-card-maker":
-		return utilityGuideHTML("社交媒体卡片制作", "填写标题、副标题和强调色，生成 1200x630 分享图。", "适合博客封面、产品更新、社媒分享和活动预告。")
+		return utilityGuideHTML("social card maker", "Enter a title, subtitle and accent color, then generate a 1200x630 sharing image.", "It is useful for blog covers, product updates, social posts and launch announcements.")
 	case "/gradient-generator":
-		return utilityGuideHTML("渐变配色生成器", "选择渐变方向后随机生成配色，并复制 CSS background 代码。", "适合网页背景、海报、卡片设计和产品视觉探索。")
+		return utilityGuideHTML("gradient generator", "Choose a direction, generate a random gradient and copy the CSS background code.", "It is useful for website backgrounds, cards, banners, posters and visual exploration.")
 	default:
-		return utilityGuideHTML(page.Heading, page.Intro, "适合日常文件处理和浏览器本地快速转换。")
+		return utilityGuideHTML(page.Heading, page.Intro, "It is useful for quick browser-based file and content tasks.")
 	}
 }
 
 func imageGuideHTML(name, how, scenario string) string {
 	return fmt.Sprintf(`<section class="guide">
-<h2>如何使用%s？</h2>
-<ol><li>%s</li><li>处理完成后检查输出文件大小、格式或尺寸是否符合目标平台要求。</li><li>如果结果不理想，可以调整参数后重新处理。</li></ol>
-<h2>%s适合哪些场景？</h2>
-<p>%s所有处理都在浏览器本地完成，图片不需要上传服务器，适合处理个人资料、商品图片和临时素材。</p>
+<h2>How to use the %s</h2>
+<ol><li>%s</li><li>After processing, check whether the output file size, format or dimensions match your target platform.</li><li>If the result is not right, adjust the settings and process the image again.</li></ol>
+<h2>When is the %s useful?</h2>
+<p>%s Processing runs in your browser, so the image does not need to be uploaded to a server for the core operation.</p>
 <section class="faq-block">
-<h2>常见问题</h2>
-<details open><summary>图片会上传到服务器吗？</summary><p>不会。当前工具使用浏览器本地能力处理图片，服务器只负责提供页面。</p></details>
-<details><summary>支持哪些图片格式？</summary><p>支持常见的 JPG、PNG 和 WebP。不同浏览器对输出格式的支持可能略有差异。</p></details>
-<details><summary>处理后的图片在哪里？</summary><p>转换或压缩完成后，浏览器会自动下载结果文件到你的默认下载目录。</p></details>
+<h2>FAQ</h2>
+<details open><summary>Does the image upload to a server?</summary><p>No. The current tool uses browser features to process the image locally. The server mainly delivers the page.</p></details>
+<details><summary>Which image formats are supported?</summary><p>Common JPG, PNG and WebP files are supported. Output support can vary slightly by browser.</p></details>
+<details><summary>Where is the processed image saved?</summary><p>After conversion, compression or resizing, the result downloads to your browser's default download folder.</p></details>
 </section>
 </section>`, html.EscapeString(name), html.EscapeString(how), html.EscapeString(name), html.EscapeString(scenario))
 }
 
 func utilityGuideHTML(name, how, scenario string) string {
 	return fmt.Sprintf(`<section class="guide">
-<h2>如何使用%s？</h2>
+<h2>How to use the %s</h2>
 <p>%s</p>
-<h2>%s适合哪些场景？</h2>
-<p>%s这个工具尽量在浏览器本地完成处理，适合临时、快速、轻量的日常任务。</p>
+<h2>When is the %s useful?</h2>
+<p>%s This tool is designed for quick, lightweight browser-based tasks.</p>
 <section class="faq-block">
-<h2>常见问题</h2>
-<details open><summary>这个工具免费吗？</summary><p>基础功能可以直接使用。未来如果加入批量处理、模板或高清导出，可能会放入 Pro 工具包。</p></details>
-<details><summary>数据会上传到服务器吗？</summary><p>当前页面的核心处理逻辑在浏览器中运行，适合处理不想上传的小型内容。</p></details>
-<details><summary>手机上可以用吗？</summary><p>可以。页面使用响应式布局，手机浏览器也能打开和处理常见任务。</p></details>
+<h2>FAQ</h2>
+<details open><summary>Is this tool free?</summary><p>Yes, the basic tool is available for free. Future batch workflows, templates or high-resolution exports may become Pro features.</p></details>
+<details><summary>Does my data upload to a server?</summary><p>The core processing logic runs in your browser, which is useful for small content you do not want to upload.</p></details>
+<details><summary>Does it work on mobile?</summary><p>Yes. The page uses a responsive layout and can be opened in modern mobile browsers.</p></details>
 </section>
 </section>`, html.EscapeString(name), html.EscapeString(how), html.EscapeString(name), html.EscapeString(scenario))
 }
@@ -480,7 +580,7 @@ func utilityLandingScript(tool string) string {
 	switch tool {
 	case "csv":
 		return `function parseCSV(text){const rows=[];let row=[],cell='',quote=false;for(let i=0;i<text.length;i++){const ch=text[i],next=text[i+1];if(ch==='"'&&quote&&next==='"'){cell+='"';i++;}else if(ch==='"'){quote=!quote;}else if(ch===','&&!quote){row.push(cell.trim());cell='';}else if((ch==='\n'||ch==='\r')&&!quote){if(ch==='\r'&&next==='\n')i++;row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);row=[];cell='';}else{cell+=ch;}}row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);return rows;}
-function convertCSV(){const rows=parseCSV(document.getElementById('csvInput').value);const out=document.getElementById('jsonOutput');if(rows.length<2){out.textContent='请粘贴带表头的 CSV 内容。';return;}const headers=rows[0];const data=rows.slice(1).map(row=>{const item={};headers.forEach((header,index)=>{item[header||('field_'+index)]=row[index]||'';});return item;});out.textContent=JSON.stringify(data,null,2);}
+function convertCSV(){const rows=parseCSV(document.getElementById('csvInput').value);const out=document.getElementById('jsonOutput');if(rows.length<2){out.textContent='Paste CSV content with a header row.';return;}const headers=rows[0];const data=rows.slice(1).map(row=>{const item={};headers.forEach((header,index)=>{item[header||('field_'+index)]=row[index]||'';});return item;});out.textContent=JSON.stringify(data,null,2);}
 convertCSV();`
 	case "markdown":
 		return `function escapeHTML(value){return value.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
@@ -491,7 +591,7 @@ renderMarkdown(false);`
 	case "qr":
 		return `function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
 function downloadCanvas(id,filename){document.getElementById(id).toBlob(blob=>{if(blob)downloadBlob(blob,filename);},'image/png');}
-function generateQR(){const text=document.getElementById('qrText').value.trim();const canvas=document.getElementById('qrCanvas');const ctx=canvas.getContext('2d');if(!text)return;if(!window.qrcode){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#111';ctx.fillText('二维码库加载失败',72,128);return;}const qr=qrcode(0,'M');qr.addData(text);qr.make();const count=qr.getModuleCount();const margin=16;const cell=Math.floor((canvas.width-margin*2)/count);const size=cell*count;const offset=Math.floor((canvas.width-size)/2);ctx.fillStyle=document.getElementById('qrLight').value;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=document.getElementById('qrDark').value;for(let row=0;row<count;row++){for(let col=0;col<count;col++){if(qr.isDark(row,col))ctx.fillRect(offset+col*cell,offset+row*cell,cell,cell);}}}
+function generateQR(){const text=document.getElementById('qrText').value.trim();const canvas=document.getElementById('qrCanvas');const ctx=canvas.getContext('2d');if(!text)return;if(!window.qrcode){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#111';ctx.fillText('QR library failed to load',56,128);return;}const qr=qrcode(0,'M');qr.addData(text);qr.make();const count=qr.getModuleCount();const margin=16;const cell=Math.floor((canvas.width-margin*2)/count);const size=cell*count;const offset=Math.floor((canvas.width-size)/2);ctx.fillStyle=document.getElementById('qrLight').value;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=document.getElementById('qrDark').value;for(let row=0;row<count;row++){for(let col=0;col<count;col++){if(qr.isDark(row,col))ctx.fillRect(offset+col*cell,offset+row*cell,cell,cell);}}}
 generateQR();`
 	case "social":
 		return `function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
@@ -511,18 +611,18 @@ func imageLandingScript() string {
 	return `let selectedFile=null,selectedImage=null,outputType='image/jpeg',outputLabel='JPG',resizeMode='contain';
 function setStatus(msg){const el=document.getElementById('status');if(el)el.textContent=msg;}
 function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
-function loadImageFile(file){if(!file||!file.type.startsWith('image/')){setStatus('请选择图片文件');return;}selectedFile=file;const img=new Image();img.onload=()=>{selectedImage=img;const canvas=document.getElementById('imageCanvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);document.getElementById('imageInfo').textContent=file.name+' · '+(file.size/1024).toFixed(1)+' KB';};img.src=URL.createObjectURL(file);}
+function loadImageFile(file){if(!file||!file.type.startsWith('image/')){setStatus('Please choose an image file');return;}selectedFile=file;const img=new Image();img.onload=()=>{selectedImage=img;const canvas=document.getElementById('imageCanvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);document.getElementById('imageInfo').textContent=file.name+' · '+(file.size/1024).toFixed(1)+' KB';};img.src=URL.createObjectURL(file);}
 function setTarget(kb){const input=document.getElementById('targetKB');if(input)input.value=kb;}
 function setFormat(type,label,el){outputType=type;outputLabel=label;document.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
 function setResizeMode(mode,el){resizeMode=mode;document.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
 function imageToBlob(canvas,type,quality){return new Promise(resolve=>canvas.toBlob(resolve,type,quality));}
-async function compressImage(){if(!selectedFile||!selectedImage){setStatus('请先选择图片');return;}const targetBytes=(parseFloat(document.getElementById('targetKB').value)||200)*1024;const canvas=document.getElementById('imageCanvas');let low=.02,high=.95,best=null;for(let i=0;i<10;i++){const q=(low+high)/2;const blob=await imageToBlob(canvas,'image/jpeg',q);if(blob.size<=targetBytes){best=blob;low=q;}else{high=q;}}if(!best)best=await imageToBlob(canvas,'image/jpeg',.02);downloadBlob(best,'compressed_'+selectedFile.name.replace(/\.[^.]+$/,'')+'.jpg');setStatus('已压缩到 '+(best.size/1024).toFixed(1)+' KB');}
-async function convertImage(){if(!selectedFile||!selectedImage){setStatus('请先选择图片');return;}const canvas=document.getElementById('imageCanvas');const ctx=canvas.getContext('2d');if(outputType==='image/jpeg'){ctx.globalCompositeOperation='destination-over';ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalCompositeOperation='source-over';}const blob=await imageToBlob(canvas,outputType,.92);const ext=outputType==='image/png'?'.png':outputType==='image/webp'?'.webp':'.jpg';downloadBlob(blob,'converted_'+selectedFile.name.replace(/\.[^.]+$/,'')+ext);setStatus('已转换为 '+outputLabel+' · '+(blob.size/1024).toFixed(1)+' KB');}
-async function resizeImage(){if(!selectedFile||!selectedImage){setStatus('请先选择图片');return;}const width=parseInt(document.getElementById('resizeW').value,10),height=parseInt(document.getElementById('resizeH').value,10);if(!width||!height){setStatus('请输入有效宽高');return;}const canvas=document.getElementById('imageCanvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);let sx=0,sy=0,sw=selectedImage.naturalWidth,sh=selectedImage.naturalHeight,dx=0,dy=0,dw=width,dh=height;if(resizeMode==='contain'){const scale=Math.min(width/sw,height/sh);dw=sw*scale;dh=sh*scale;dx=(width-dw)/2;dy=(height-dh)/2;}else if(resizeMode==='cover'){const target=width/height,ratio=sw/sh;if(ratio>target){sw=sh*target;sx=(selectedImage.naturalWidth-sw)/2;}else{sh=sw/target;sy=(selectedImage.naturalHeight-sh)/2;}}ctx.drawImage(selectedImage,sx,sy,sw,sh,dx,dy,dw,dh);const blob=await imageToBlob(canvas,'image/jpeg',.92);downloadBlob(blob,'resized_'+selectedFile.name.replace(/\.[^.]+$/,'')+'_'+width+'x'+height+'.jpg');setStatus('已转换为 '+width+'x'+height+' · '+(blob.size/1024).toFixed(1)+' KB');}`
+async function compressImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const targetBytes=(parseFloat(document.getElementById('targetKB').value)||200)*1024;const canvas=document.getElementById('imageCanvas');let low=.02,high=.95,best=null;for(let i=0;i<10;i++){const q=(low+high)/2;const blob=await imageToBlob(canvas,'image/jpeg',q);if(blob.size<=targetBytes){best=blob;low=q;}else{high=q;}}if(!best)best=await imageToBlob(canvas,'image/jpeg',.02);downloadBlob(best,'compressed_'+selectedFile.name.replace(/\.[^.]+$/,'')+'.jpg');setStatus('Compressed to '+(best.size/1024).toFixed(1)+' KB');}
+async function convertImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const canvas=document.getElementById('imageCanvas');const ctx=canvas.getContext('2d');if(outputType==='image/jpeg'){ctx.globalCompositeOperation='destination-over';ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalCompositeOperation='source-over';}const blob=await imageToBlob(canvas,outputType,.92);const ext=outputType==='image/png'?'.png':outputType==='image/webp'?'.webp':'.jpg';downloadBlob(blob,'converted_'+selectedFile.name.replace(/\.[^.]+$/,'')+ext);setStatus('Converted to '+outputLabel+' · '+(blob.size/1024).toFixed(1)+' KB');}
+async function resizeImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const width=parseInt(document.getElementById('resizeW').value,10),height=parseInt(document.getElementById('resizeH').value,10);if(!width||!height){setStatus('Enter a valid width and height');return;}const canvas=document.getElementById('imageCanvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);let sx=0,sy=0,sw=selectedImage.naturalWidth,sh=selectedImage.naturalHeight,dx=0,dy=0,dw=width,dh=height;if(resizeMode==='contain'){const scale=Math.min(width/sw,height/sh);dw=sw*scale;dh=sh*scale;dx=(width-dw)/2;dy=(height-dh)/2;}else if(resizeMode==='cover'){const target=width/height,ratio=sw/sh;if(ratio>target){sw=sh*target;sx=(selectedImage.naturalWidth-sw)/2;}else{sh=sw/target;sy=(selectedImage.naturalHeight-sh)/2;}}ctx.drawImage(selectedImage,sx,sy,sw,sh,dx,dy,dw,dh);const blob=await imageToBlob(canvas,'image/jpeg',.92);downloadBlob(blob,'resized_'+selectedFile.name.replace(/\.[^.]+$/,'')+'_'+width+'x'+height+'.jpg');setStatus('Resized to '+width+'x'+height+' · '+(blob.size/1024).toFixed(1)+' KB');}`
 }
 
 const landingHTML = `<!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -565,13 +665,13 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 </head>
 <body>
 <main class="wrap">
-<nav class="top"><a class="brand" href="/">OnlineBox</a><a class="home" href="/">全部工具</a></nav>
+<nav class="top"><a class="brand" href="/">OnlineBox</a><a class="home" href="/">All tools</a></nav>
 <div class="badge">Focused browser tool</div>
 <h1>__PAGE_HEADING__<em>__PAGE_ACCENT__</em></h1>
 <p class="intro">__PAGE_INTRO__</p>
 __PRIMARY_TOOL__
 __GUIDE_CONTENT__
-<section class="related" aria-label="相关工具">__RELATED_LINKS__</section>
+<section class="related" aria-label="Related tools">__RELATED_LINKS__</section>
 </main>
 <script>
 __LANDING_SCRIPT__
