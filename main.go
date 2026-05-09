@@ -457,8 +457,13 @@ Bob,bob@example.com,pro</textarea>
 	case "batch":
 		return `<section class="tool-panel">
 <label for="batchInput">Choose images</label>
-<input id="batchInput" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="loadBatchFiles(this.files)">
-<div id="batchInfo" class="hint">Select multiple JPG, PNG or WebP images. Files are compressed locally in your browser.</div>
+<div id="batchDrop" class="file-drop" role="button" tabindex="0" onclick="document.getElementById('batchInput').click()" onkeydown="handleBatchDropKey(event)">
+<input id="batchInput" class="file-input-hidden" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="loadBatchFiles(this.files)">
+<strong>Choose multiple images</strong>
+<span>Drag a group of JPG, PNG or WebP images here, or click and use Shift, Cmd or Ctrl to select more than one file.</span>
+</div>
+<div id="batchInfo" class="hint">No images selected yet. Files are compressed locally in your browser.</div>
+<div id="batchList" class="file-list" aria-live="polite"></div>
 <label for="batchTargetKB">Target file size per image</label>
 <div class="grid unit"><input id="batchTargetKB" type="number" value="200" min="10" max="20000"><span>KB</span></div>
 <div class="choices"><button class="chip" onclick="setBatchTarget(100)">100 KB</button><button class="chip on" onclick="setBatchTarget(200)">200 KB</button><button class="chip" onclick="setBatchTarget(500)">500 KB</button><button class="chip" onclick="setBatchTarget(1024)">1 MB</button></div>
@@ -633,11 +638,15 @@ func batchImageLandingScript() string {
 function setBatchStatus(msg){document.getElementById('batchStatus').textContent=msg;}
 function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
 function imageToBlob(canvas,type,quality){return new Promise(resolve=>canvas.toBlob(resolve,type,quality));}
-function loadBatchFiles(files){batchFiles=Array.from(files||[]).filter(file=>file.type&&file.type.startsWith('image/'));document.getElementById('batchInfo').textContent=batchFiles.length?batchFiles.length+' image(s) selected. They will be processed locally.':'Select multiple JPG, PNG or WebP images.';document.getElementById('batchOutput').textContent='';}
+function renderBatchList(){const list=document.getElementById('batchList');list.textContent='';batchFiles.slice(0,12).forEach(file=>{const row=document.createElement('div');row.className='file-pill';const name=document.createElement('span');name.textContent=file.name;const size=document.createElement('span');size.textContent=(file.size/1024).toFixed(1)+' KB';row.append(name,size);list.appendChild(row);});if(batchFiles.length>12){const more=document.createElement('div');more.className='file-pill';more.textContent='+'+(batchFiles.length-12)+' more image(s) selected';list.appendChild(more);}}
+function loadBatchFiles(files){batchFiles=Array.from(files||[]).filter(file=>file.type&&file.type.startsWith('image/'));document.getElementById('batchInfo').textContent=batchFiles.length?batchFiles.length+' image(s) selected. They will be processed locally.':'No images selected yet. Choose multiple JPG, PNG or WebP images.';document.getElementById('batchOutput').textContent='';setBatchStatus('');renderBatchList();}
+function handleBatchDropKey(event){if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('batchInput').click();}}
+function setupBatchDrop(){const drop=document.getElementById('batchDrop');if(!drop)return;['dragenter','dragover'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.add('over');}));['dragleave','drop'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.remove('over');}));drop.addEventListener('drop',event=>loadBatchFiles(event.dataTransfer.files));}
 function setBatchTarget(kb){document.getElementById('batchTargetKB').value=kb;}
 function loadImage(file){return new Promise((resolve,reject)=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);resolve(img);};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Could not load '+file.name));};img.src=url;});}
 async function compressFileToTarget(file,targetBytes){const img=await loadImage(file);const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0);let low=.02,high=.95,best=null;for(let i=0;i<10;i++){const q=(low+high)/2;const blob=await imageToBlob(canvas,'image/jpeg',q);if(blob.size<=targetBytes){best=blob;low=q;}else{high=q;}}if(!best)best=await imageToBlob(canvas,'image/jpeg',.02);return best;}
-async function compressBatchImages(){if(!batchFiles.length){setBatchStatus('Choose images first');return;}const targetKB=parseFloat(document.getElementById('batchTargetKB').value)||200;if(targetKB<=0){setBatchStatus('Enter a valid target size');return;}const targetBytes=targetKB*1024;const output=document.getElementById('batchOutput');output.textContent='';let done=0;for(const file of batchFiles){setBatchStatus('Compressing '+(done+1)+' of '+batchFiles.length+'...');try{const blob=await compressFileToTarget(file,targetBytes);const base=file.name.replace(/\.[^.]+$/,'');downloadBlob(blob,'compressed_'+base+'.jpg');done++;output.textContent+=file.name+' -> '+(blob.size/1024).toFixed(1)+' KB\n';}catch(err){output.textContent+=file.name+' -> failed\n';}}setBatchStatus('Finished '+done+' of '+batchFiles.length+' image(s).');}`
+async function compressBatchImages(){if(!batchFiles.length){setBatchStatus('Choose images first');return;}const targetKB=parseFloat(document.getElementById('batchTargetKB').value)||200;if(targetKB<=0){setBatchStatus('Enter a valid target size');return;}const targetBytes=targetKB*1024;const output=document.getElementById('batchOutput');output.textContent='';let done=0;for(const file of batchFiles){setBatchStatus('Compressing '+(done+1)+' of '+batchFiles.length+'...');try{const blob=await compressFileToTarget(file,targetBytes);const base=file.name.replace(/\.[^.]+$/,'');downloadBlob(blob,'compressed_'+base+'.jpg');done++;output.textContent+=file.name+' -> '+(blob.size/1024).toFixed(1)+' KB\n';}catch(err){output.textContent+=file.name+' -> failed\n';}}setBatchStatus('Finished '+done+' of '+batchFiles.length+' image(s).');}
+setupBatchDrop();`
 }
 
 const landingHTML = `<!DOCTYPE html>
@@ -669,6 +678,14 @@ textarea,input,select{width:100%;background:var(--surface2);border:1px solid var
 textarea{min-height:170px;resize:vertical;line-height:1.55}
 textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .grid{display:grid;gap:12px}.two{grid-template-columns:1fr 1fr}.unit{grid-template-columns:1fr auto;align-items:center}
+.file-input-hidden{display:none}
+.file-drop{border:1.5px dashed var(--border);background:var(--surface2);border-radius:14px;padding:24px;margin:10px 0 12px;cursor:pointer;display:grid;gap:8px;transition:border-color .16s,background .16s}
+.file-drop:hover,.file-drop:focus-visible,.file-drop.over{border-color:var(--accent);background:var(--accent-dim);outline:0}
+.file-drop strong{font-family:'Syne',sans-serif;color:var(--text);font-size:20px;line-height:1.2}
+.file-drop span{color:var(--muted);line-height:1.6}
+.file-list{display:grid;gap:8px;margin-top:10px}
+.file-pill{display:flex;justify-content:space-between;gap:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;line-height:1.4}
+.file-pill span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-pill span:last-child{color:var(--muted);white-space:nowrap}
 .btn{display:inline-flex;justify-content:center;width:100%;background:var(--accent);color:#0e0e11;border:0;border-radius:12px;padding:15px 18px;margin-top:14px;font-family:'Syne',sans-serif;font-weight:800;cursor:pointer;text-decoration:none}
 .ghost,.chip{border:1px solid var(--border);background:transparent;color:var(--text);border-radius:10px;padding:10px 12px;font-weight:800;cursor:pointer;margin-top:10px}
 .choices{display:flex;gap:8px;flex-wrap:wrap}.chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
