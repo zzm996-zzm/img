@@ -175,6 +175,15 @@ var publicPages = []publicPage{
 		PageTool:    "compress",
 		PageUtility: "markdown",
 	},
+	{
+		Path:        "/privacy-policy",
+		Title:       "Privacy Policy | OnlineBox",
+		Description: "Privacy Policy for OnlineBox browser tools, including local processing, analytics, cookies and advertising disclosures.",
+		Heading:     "Privacy Policy",
+		Accent:      "how OnlineBox handles data",
+		Intro:       "This policy explains what information OnlineBox collects, how browser-based tools process files, and how analytics and advertising services may use cookies.",
+		Kind:        "legal",
+	},
 }
 
 var publicPageByPath = map[string]publicPage{}
@@ -241,6 +250,9 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func renderIndexHTML(page publicPage) string {
+	if page.Kind == "legal" {
+		return renderPrivacyHTML(page)
+	}
 	if page.Path != "/" {
 		return renderLandingHTML(page)
 	}
@@ -309,6 +321,18 @@ func renderLandingHTML(page publicPage) string {
 	).Replace(landingHTML)
 }
 
+func renderPrivacyHTML(page publicPage) string {
+	return strings.NewReplacer(
+		"__PAGE_TITLE__", html.EscapeString(page.Title),
+		"__PAGE_DESCRIPTION__", html.EscapeString(page.Description),
+		"__CANONICAL_URL__", html.EscapeString(siteURL()+page.Path),
+		"__PAGE_HEADING__", html.EscapeString(page.Heading),
+		"__PAGE_ACCENT__", html.EscapeString(page.Accent),
+		"__PAGE_INTRO__", html.EscapeString(page.Intro),
+		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
+	).Replace(privacyHTML)
+}
+
 func qrScriptTag(page publicPage) string {
 	if page.PageUtility == "qr" {
 		return `<script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>`
@@ -357,6 +381,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(42px,7vw,78px);line-height:.98;
 .tool-card strong{font-family:'Syne',sans-serif;font-size:19px}.tool-card small{color:var(--muted);line-height:1.55;font-size:13px}
 .notes{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}.note{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}.note b{display:block;margin-bottom:8px}.note p{font-size:13px;color:var(--muted);line-height:1.6}
 .faq{margin-top:54px;display:grid;grid-template-columns:.7fr 1fr;gap:26px}.faq h2{font-family:'Syne',sans-serif;font-size:30px}.faq details{border-top:1px solid var(--line);padding:16px 0}.faq summary{cursor:pointer;font-weight:800}.faq p{color:var(--muted);line-height:1.65;margin-top:10px}
+.site-footer{border-top:1px solid var(--line);margin-top:54px;padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.site-footer a{color:var(--text);text-decoration:none;font-weight:800}
 @media(max-width:820px){.hero,.faq{grid-template-columns:1fr}.grid,.notes,.quick{grid-template-columns:1fr}.nav{align-items:flex-start;gap:16px;flex-direction:column}.wrap{padding-top:26px}}
 </style>
 </head>
@@ -402,6 +427,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(42px,7vw,78px);line-height:.98;
 <details><summary>Why are tools on separate pages?</summary><p>Separate pages are better for users and search engines because each page can focus on one task, one title and one set of instructions.</p></details>
 </div>
 </section>
+<footer class="site-footer"><span>OnlineBox</span><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
 </body>
 </html>`
@@ -710,6 +736,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .hint{color:var(--muted);font-size:13px;line-height:1.6;margin-top:10px}.pro-kicker{display:inline-flex;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(212,255,87,.24);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}
 .guide{color:var(--muted);line-height:1.75;margin:30px 0}.guide h2{font-family:'Syne',sans-serif;color:var(--text);font-size:22px;margin:26px 0 10px}.guide p{margin-bottom:12px}.guide ol{padding-left:22px;margin:10px 0 18px}.guide li{margin-bottom:8px}.faq-block{margin-top:24px}.faq-block details{border-top:1px solid var(--border);padding:14px 0}.faq-block summary{color:var(--text);font-weight:800;cursor:pointer}.faq-block p{margin:10px 0 0}
 .related{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:30px}.related a{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);text-decoration:none;padding:12px;font-weight:800}
+.site-footer{border-top:1px solid var(--border);margin-top:34px;padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.site-footer a{color:var(--text);text-decoration:none;font-weight:800}
 @media(max-width:620px){.two,.related{grid-template-columns:1fr}.wrap{padding-top:30px}}
 </style>
 </head>
@@ -722,10 +749,70 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 __PRIMARY_TOOL__
 __GUIDE_CONTENT__
 <section class="related" aria-label="Related tools">__RELATED_LINKS__</section>
+<footer class="site-footer"><span>OnlineBox</span><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
 <script>
 __LANDING_SCRIPT__
 </script>
+</body>
+</html>`
+
+const privacyHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__PAGE_TITLE__</title>
+<meta name="description" content="__PAGE_DESCRIPTION__">
+<link rel="canonical" href="__CANONICAL_URL__">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+__GOOGLE_ANALYTICS__
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0e0e11;--surface:#18181d;--border:rgba(255,255,255,.09);--accent:#d4ff57;--text:#f2f2f2;--muted:#9b9b9b}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:820px;margin:0 auto;padding:48px 22px 72px}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:44px}.brand{color:var(--accent);font-family:'Syne',sans-serif;font-weight:800;text-decoration:none}.home{color:var(--muted);font-size:13px;text-decoration:none}
+.badge{display:inline-flex;color:var(--accent);background:rgba(212,255,87,.1);border:1px solid rgba(212,255,87,.24);border-radius:999px;padding:6px 11px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px}
+h1{font-family:'Syne',sans-serif;font-size:clamp(36px,7vw,62px);line-height:1.04;margin-bottom:16px}h1 em{display:block;color:var(--accent);font-style:normal}
+.intro{color:var(--muted);font-size:16px;line-height:1.7;max-width:680px;margin-bottom:28px}
+.policy{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;color:var(--muted);line-height:1.75}.policy h2{font-family:'Syne',sans-serif;color:var(--text);font-size:23px;margin:24px 0 8px}.policy h2:first-child{margin-top:0}.policy p{margin-bottom:12px}.policy ul{padding-left:22px;margin:8px 0 14px}.policy li{margin-bottom:8px}.policy a{color:var(--accent);font-weight:800;text-decoration:none}
+.site-footer{border-top:1px solid var(--border);margin-top:34px;padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.site-footer a{color:var(--text);text-decoration:none;font-weight:800}
+</style>
+</head>
+<body>
+<main class="wrap">
+<nav class="top"><a class="brand" href="/">OnlineBox</a><a class="home" href="/">All tools</a></nav>
+<div class="badge">Legal</div>
+<h1>__PAGE_HEADING__<em>__PAGE_ACCENT__</em></h1>
+<p class="intro">__PAGE_INTRO__</p>
+<section class="policy">
+<h2>Overview</h2>
+<p>OnlineBox provides browser-based tools for images, data and creator workflows. Many tools are designed to process files locally in your browser, which means the file content is handled by your device for the core operation instead of being uploaded to our server.</p>
+<p>Last updated: May 9, 2026.</p>
+<h2>Information We Process</h2>
+<ul>
+<li>Tool inputs such as images, CSV text, Markdown text or QR code content may be processed in your browser to produce the requested output.</li>
+<li>Basic technical information such as page views, browser type, approximate region and device information may be collected through analytics tools.</li>
+<li>If account, payment or contact features are used in the future, information you submit for those features may be processed to provide the requested service.</li>
+</ul>
+<h2>Local File Processing</h2>
+<p>Image compression, image conversion, resizing, batch compression and similar tools use browser features whenever possible. The server mainly delivers the web page. You should still avoid using any online tool for highly sensitive files unless you are comfortable with the processing environment.</p>
+<h2>Analytics</h2>
+<p>OnlineBox uses Google Analytics to understand traffic, popular pages and general usage patterns. Google Analytics may use cookies or similar technologies to collect aggregated reporting data. You can learn more from Google's page about <a href="https://policies.google.com/technologies/partner-sites">how Google uses information from sites or apps that use its services</a>.</p>
+<h2>Advertising and Cookies</h2>
+<p>OnlineBox may display ads served by Google or other advertising partners. These partners may use cookies, advertising identifiers or similar technologies to serve ads, measure ad performance and help prevent fraud.</p>
+<p>Google's use of advertising cookies enables it and its partners to serve ads based on visits to OnlineBox and other sites. Users may opt out of personalized advertising by visiting <a href="https://adssettings.google.com/">Google Ads Settings</a>. You may also manage cookies in your browser settings.</p>
+<h2>Third-Party Services</h2>
+<p>Some pages may load third-party scripts, fonts, analytics, advertising or utility libraries. These third parties may process data according to their own privacy policies.</p>
+<h2>Data Retention</h2>
+<p>We keep analytics and operational records only as long as needed to understand site performance, maintain the service, comply with obligations and improve the tools.</p>
+<h2>Changes to This Policy</h2>
+<p>We may update this Privacy Policy when tools, analytics, advertising or legal requirements change. The updated version will be posted on this page.</p>
+</section>
+<footer class="site-footer"><span>OnlineBox</span><a href="/privacy-policy">Privacy Policy</a></footer>
+</main>
 </body>
 </html>`
 

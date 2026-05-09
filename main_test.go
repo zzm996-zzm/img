@@ -185,13 +185,20 @@ func TestHandleSitemap(t *testing.T) {
 		t.Fatalf("unexpected sitemap urls: %#v", parsed.URLs)
 	}
 	var foundCompressor bool
+	var foundPrivacy bool
 	for _, item := range parsed.URLs {
 		if item.Loc == "https://onlinebox.site/image-compressor" {
 			foundCompressor = true
 		}
+		if item.Loc == "https://onlinebox.site/privacy-policy" {
+			foundPrivacy = true
+		}
 	}
 	if !foundCompressor {
 		t.Fatalf("expected image compressor URL in sitemap: %#v", parsed.URLs)
+	}
+	if !foundPrivacy {
+		t.Fatalf("expected privacy policy URL in sitemap: %#v", parsed.URLs)
 	}
 }
 
@@ -367,6 +374,7 @@ func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 		"Data and creator tools",
 		`href="/csv-to-json"`,
 		`href="/image-compressor"`,
+		`href="/privacy-policy"`,
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected home body to contain %q", expected)
@@ -379,6 +387,41 @@ func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 	} {
 		if strings.Contains(body, unexpected) {
 			t.Fatalf("expected directory home to omit %q", unexpected)
+		}
+	}
+}
+
+func TestHandleIndexRendersPrivacyPolicy(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/privacy-policy", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>Privacy Policy | OnlineBox</title>",
+		`<link rel="canonical" href="https://onlinebox.site/privacy-policy">`,
+		"Google Analytics",
+		"Advertising and Cookies",
+		"https://adssettings.google.com/",
+		"https://policies.google.com/technologies/partner-sites",
+		`https://www.googletagmanager.com/gtag/js?id=G-GRDT3349BV`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected privacy policy to contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{
+		`id="csvInput"`,
+		`id="imageInput"`,
+		`__`,
+	} {
+		if strings.Contains(body, unexpected) {
+			t.Fatalf("expected privacy policy to omit %q", unexpected)
 		}
 	}
 }
