@@ -443,6 +443,8 @@ func TestHandleIndexRendersImprovedMarkdownParser(t *testing.T) {
 		`github-markdown.min.css`,
 		`class="output preview markdown-body"`,
 		`body class="markdown-body"`,
+		`break-inside:avoid`,
+		`@page{margin:16mm 14mm}`,
 		"line.startsWith('### ')",
 		`line.startsWith('\x60\x60\x60')`,
 		"addListItem(state,'ol'",
