@@ -425,3 +425,32 @@ func TestHandleIndexRendersPrivacyPolicy(t *testing.T) {
 		}
 	}
 }
+
+func TestHandleIndexRendersImprovedMarkdownParser(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/markdown-to-pdf", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"function splitTableRow",
+		"function renderTable",
+		"function addListItem",
+		"line.startsWith('### ')",
+		`line.startsWith('\x60\x60\x60')`,
+		"addListItem(state,'ol'",
+		"<blockquote>",
+		`<div class="table-wrap"><table>`,
+		".preview table",
+		".preview pre",
+		"Markdown PDF",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected markdown page to contain %q", expected)
+		}
+	}
+}

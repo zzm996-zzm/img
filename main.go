@@ -446,13 +446,33 @@ Bob,bob@example.com,pro</textarea>
 	case "markdown":
 		return `<section class="tool-panel">
 <label for="markdownInput">Markdown input</label>
-<textarea id="markdownInput" spellcheck="false"># Project Notes
+<textarea id="markdownInput" spellcheck="false"># Weekly Project Report
 
-## Tools
-- Image compression
-- CSV to JSON
+## Completed This Week
 
-**Export this page with browser print.**</textarea>
+### Feature Development
+- Completed user login with JWT authentication
+- Fixed occasional 500 errors during image upload
+- Added CSV export
+
+### Performance
+| Metric | This Week | Last Week | Change |
+|---|---|---|---|
+| DAU | 1,200 | 980 | +22% |
+| Error Count | 12 | 34 | -65% |
+
+> Memory leak investigation continues next week.
+
+&#96;&#96;&#96;go
+func handleUpload(w http.ResponseWriter, r *http.Request) {
+    file, _, err := r.FormFile("image")
+    if err != nil {
+        http.Error(w, "upload failed", 400)
+        return
+    }
+    defer file.Close()
+}
+&#96;&#96;&#96;</textarea>
 <button class="btn" onclick="renderMarkdown(true)">Preview and print PDF</button>
 <div id="markdownPreview" class="output preview"></div>
 </section>`
@@ -635,9 +655,15 @@ function convertCSV(){const rows=parseCSV(document.getElementById('csvInput').va
 convertCSV();`
 	case "markdown":
 		return `function escapeHTML(value){return value.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
-function inlineMarkdown(text){return escapeHTML(text).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');}
-function markdownToHTML(markdown){const lines=markdown.split(/\r?\n/);let html='',inList=false;for(const raw of lines){const line=raw.trim();if(!line){if(inList){html+='</ul>';inList=false;}continue;}if(line.startsWith('# ')){if(inList){html+='</ul>';inList=false;}html+='<h1>'+inlineMarkdown(line.slice(2))+'</h1>';}else if(line.startsWith('## ')){if(inList){html+='</ul>';inList=false;}html+='<h2>'+inlineMarkdown(line.slice(3))+'</h2>';}else if(line.startsWith('- ')){if(!inList){html+='<ul>';inList=true;}html+='<li>'+inlineMarkdown(line.slice(2))+'</li>';}else{if(inList){html+='</ul>';inList=false;}html+='<p>'+inlineMarkdown(line)+'</p>';}}if(inList)html+='</ul>';return html;}
-function renderMarkdown(print){const html=markdownToHTML(document.getElementById('markdownInput').value);document.getElementById('markdownPreview').innerHTML=html;if(print){const w=window.open('','_blank');w.document.write('<!doctype html><html><head><title>Markdown PDF</title><style>body{font-family:Arial,sans-serif;max-width:760px;margin:40px auto;line-height:1.65;color:#111}</style></head><body>'+html+'<script>window.print()<\/script></body></html>');w.document.close();}}
+function inlineMarkdown(text){return escapeHTML(text).replace(/\x60([^\x60]+)\x60/g,'<code>$1</code>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>');}
+function splitTableRow(line){let value=line.trim();if(value.startsWith('|'))value=value.slice(1);if(value.endsWith('|'))value=value.slice(0,-1);return value.split('|').map(cell=>cell.trim());}
+function isTableDivider(line){return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);}
+function closeBlocks(state){if(state.inList){state.html+='</'+state.listTag+'>';state.inList=false;state.listTag='';}if(state.inQuote){state.html+='</blockquote>';state.inQuote=false;}}
+function addListItem(state,tag,text){if(state.inQuote){state.html+='</blockquote>';state.inQuote=false;}if(state.inList&&state.listTag!==tag){state.html+='</'+state.listTag+'>';state.inList=false;state.listTag='';}if(!state.inList){state.html+='<'+tag+'>';state.inList=true;state.listTag=tag;}state.html+='<li>'+inlineMarkdown(text)+'</li>';}
+function renderTable(lines,start,state){const headers=splitTableRow(lines[start]);let index=start+2;let body='';while(index<lines.length&&lines[index].includes('|')&&lines[index].trim()&&!isTableDivider(lines[index])){body+='<tr>'+splitTableRow(lines[index]).map(cell=>'<td>'+inlineMarkdown(cell)+'</td>').join('')+'</tr>';index++;}closeBlocks(state);state.html+='<div class="table-wrap"><table><thead><tr>'+headers.map(cell=>'<th>'+inlineMarkdown(cell)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div>';return index-1;}
+function markdownToHTML(markdown){const lines=markdown.split(/\r?\n/);const state={html:'',inList:false,inQuote:false,listTag:''};let inCode=false,code='',codeLang='';for(let i=0;i<lines.length;i++){const raw=lines[i],line=raw.trim();if(line.startsWith('\x60\x60\x60')){if(inCode){state.html+='<pre><code class="language-'+escapeHTML(codeLang)+'">'+escapeHTML(code.replace(/\n$/,''))+'</code></pre>';inCode=false;code='';codeLang='';}else{closeBlocks(state);inCode=true;codeLang=line.slice(3).trim();}continue;}if(inCode){code+=raw+'\n';continue;}if(!line){closeBlocks(state);continue;}if(i+1<lines.length&&line.includes('|')&&isTableDivider(lines[i+1])){i=renderTable(lines,i,state);continue;}if(line==='---'||line==='***'){closeBlocks(state);state.html+='<hr>';continue;}if(line.startsWith('> ')){if(state.inList){state.html+='</'+state.listTag+'>';state.inList=false;state.listTag='';}if(!state.inQuote){state.html+='<blockquote>';state.inQuote=true;}state.html+='<p>'+inlineMarkdown(line.slice(2))+'</p>';continue;}if(line.startsWith('### ')){closeBlocks(state);state.html+='<h3>'+inlineMarkdown(line.slice(4))+'</h3>';}else if(line.startsWith('## ')){closeBlocks(state);state.html+='<h2>'+inlineMarkdown(line.slice(3))+'</h2>';}else if(line.startsWith('# ')){closeBlocks(state);state.html+='<h1>'+inlineMarkdown(line.slice(2))+'</h1>';}else if(/^[-*]\s+/.test(line)){addListItem(state,'ul',line.replace(/^[-*]\s+/,''));}else if(/^\d+\.\s+/.test(line)){addListItem(state,'ol',line.replace(/^\d+\.\s+/,''));}else{closeBlocks(state);state.html+='<p>'+inlineMarkdown(line)+'</p>';}}if(inCode){state.html+='<pre><code>'+escapeHTML(code.replace(/\n$/,''))+'</code></pre>';}closeBlocks(state);return state.html;}
+const markdownPrintStyle='body{font-family:Arial,sans-serif;max-width:820px;margin:40px auto;line-height:1.65;color:#111}h1,h2,h3{line-height:1.25}table{border-collapse:collapse;width:100%;margin:18px 0}th,td{border:1px solid #d0d0d0;padding:8px 10px;text-align:left}th{background:#f2f2f2}pre{background:#f6f8fa;border:1px solid #ddd;border-radius:8px;padding:14px;overflow:auto}code{background:#f1f1f1;padding:2px 5px;border-radius:4px}pre code{background:transparent;padding:0}blockquote{border-left:4px solid #999;margin:16px 0;padding:2px 16px;color:#555;background:#f8f8f8}hr{border:0;border-top:1px solid #ddd;margin:24px 0}';
+function renderMarkdown(print){const html=markdownToHTML(document.getElementById('markdownInput').value);document.getElementById('markdownPreview').innerHTML=html;if(print){const w=window.open('','_blank');w.document.write('<!doctype html><html><head><title>Markdown PDF</title><style>'+markdownPrintStyle+'</style></head><body>'+html+'<script>window.print()<\/script></body></html>');w.document.close();}}
 renderMarkdown(false);`
 	case "qr":
 		return `function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
@@ -730,7 +756,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .ghost,.chip{border:1px solid var(--border);background:transparent;color:var(--text);border-radius:10px;padding:10px 12px;font-weight:800;cursor:pointer;margin-top:10px}
 .choices{display:flex;gap:8px;flex-wrap:wrap}.chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
 .output{background:var(--surface2);border:1px solid var(--border);border-radius:12px;min-height:170px;padding:16px;margin-top:16px;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.55}
-.preview{font-family:'DM Sans',sans-serif}.preview h1,.preview h2{font-family:'Syne',sans-serif;margin:0 0 10px}.preview p,.preview li{line-height:1.65;margin-bottom:8px}
+.preview{font-family:'DM Sans',sans-serif}.preview h1,.preview h2,.preview h3{font-family:'Syne',sans-serif;margin:0 0 10px}.preview h3{font-size:19px;color:var(--accent)}.preview p,.preview li{line-height:1.65;margin-bottom:8px}.preview ul,.preview ol{padding-left:22px;margin:10px 0 14px}.preview blockquote{border-left:3px solid var(--accent);background:rgba(212,255,87,.08);margin:14px 0;padding:10px 14px;color:var(--text)}.preview pre{background:#101114;border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;margin:14px 0}.preview code{background:rgba(255,255,255,.08);border-radius:5px;padding:2px 5px}.preview pre code{background:transparent;padding:0}.preview hr{border:0;border-top:1px solid var(--border);margin:20px 0}.table-wrap{overflow:auto;margin:14px 0}.preview table{width:100%;border-collapse:collapse;min-width:520px}.preview th,.preview td{border:1px solid var(--border);padding:9px 10px;text-align:left}.preview th{color:var(--text);background:rgba(255,255,255,.05)}
 .canvas-wrap{display:flex;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;overflow:auto}
 .canvas-wrap canvas{max-width:100%;height:auto}.wide canvas{width:100%;max-width:520px}.gradient-preview{height:210px;border-radius:12px;border:1px solid var(--border);margin-top:16px}
 .hint{color:var(--muted);font-size:13px;line-height:1.6;margin-top:10px}.pro-kicker{display:inline-flex;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(212,255,87,.24);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}
