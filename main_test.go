@@ -245,13 +245,22 @@ func TestHandleIndexRendersRouteSpecificSEO(t *testing.T) {
 	body := rr.Body.String()
 	for _, expected := range []string{
 		"<title>图片格式转换 | 免费 JPG PNG WebP 在线互转</title>",
-		`<body class="route-image">`,
-		"<h1>图片格式转换<br><em>JPG、PNG、WebP 免费互转</em></h1>",
+		"<h1>图片格式转换<em>JPG、PNG、WebP 免费互转</em></h1>",
 		`<link rel="canonical" href="https://onlinebox.site/image-converter">`,
-		`const INITIAL_PAGE_TOOL = "convert";`,
+		`function convertImage()`,
+		`href="/image-compressor"`,
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected body to contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{
+		"CSV内容",
+		"Markdown 导出 PDF",
+		"Creator Tools",
+	} {
+		if strings.Contains(body, unexpected) {
+			t.Fatalf("expected focused page to omit %q", unexpected)
 		}
 	}
 }
@@ -269,14 +278,22 @@ func TestHandleIndexRendersUtilityLandingPage(t *testing.T) {
 	body := rr.Body.String()
 	for _, expected := range []string{
 		"<title>CSV 转 JSON | 免费在线表格数据转换</title>",
-		`<body class="route-utility">`,
-		"<h1>CSV 转 JSON<br><em>免费在线表格数据转换</em></h1>",
+		"<h1>CSV 转 JSON<em>免费在线表格数据转换</em></h1>",
 		`<link rel="canonical" href="https://onlinebox.site/csv-to-json">`,
-		`const INITIAL_PAGE_UTILITY = "csv";`,
+		`function convertCSV()`,
 		`href="/image-compressor"`,
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected body to contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{
+		`id="qrText"`,
+		`id="markdownInput"`,
+		"Live Browser Tools",
+	} {
+		if strings.Contains(body, unexpected) {
+			t.Fatalf("expected focused page to omit %q", unexpected)
 		}
 	}
 }

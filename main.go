@@ -241,6 +241,9 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func renderIndexHTML(page publicPage) string {
+	if page.Path != "/" {
+		return renderLandingHTML(page)
+	}
 	canonical := siteURL() + page.Path
 	if page.Path == "/" {
 		canonical = siteURL() + "/"
@@ -262,6 +265,250 @@ func renderIndexHTML(page publicPage) string {
 	}
 	return rendered
 }
+
+func renderLandingHTML(page publicPage) string {
+	canonical := siteURL() + page.Path
+	if page.Path == "/" {
+		canonical = siteURL() + "/"
+	}
+	return strings.NewReplacer(
+		"__PAGE_TITLE__", html.EscapeString(page.Title),
+		"__PAGE_DESCRIPTION__", html.EscapeString(page.Description),
+		"__CANONICAL_URL__", html.EscapeString(canonical),
+		"__PAGE_HEADING__", html.EscapeString(page.Heading),
+		"__PAGE_ACCENT__", html.EscapeString(page.Accent),
+		"__PAGE_INTRO__", html.EscapeString(page.Intro),
+		"__PRIMARY_TOOL__", landingToolHTML(page),
+		"__RELATED_LINKS__", relatedLinksHTML(page),
+		"__QR_SCRIPT__", qrScriptTag(page),
+		"__LANDING_SCRIPT__", landingScript(page),
+	).Replace(landingHTML)
+}
+
+func qrScriptTag(page publicPage) string {
+	if page.PageUtility == "qr" {
+		return `<script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>`
+	}
+	return ""
+}
+
+func landingToolHTML(page publicPage) string {
+	switch page.PageUtility {
+	case "csv":
+		return `<section class="tool-panel">
+<label for="csvInput">CSV 内容</label>
+<textarea id="csvInput" spellcheck="false">name,email,plan
+Alice,alice@example.com,free
+Bob,bob@example.com,pro</textarea>
+<button class="btn" onclick="convertCSV()">转换为 JSON</button>
+<pre id="jsonOutput" class="output"></pre>
+</section>`
+	case "markdown":
+		return `<section class="tool-panel">
+<label for="markdownInput">Markdown 内容</label>
+<textarea id="markdownInput" spellcheck="false"># Project Notes
+
+## Tools
+- Image compression
+- CSV to JSON
+
+**Export this page with browser print.**</textarea>
+<button class="btn" onclick="renderMarkdown(true)">预览并打印 PDF</button>
+<div id="markdownPreview" class="output preview"></div>
+</section>`
+	case "qr":
+		return `<section class="tool-panel">
+<label for="qrText">二维码内容</label>
+<textarea id="qrText">https://onlinebox.site/</textarea>
+<div class="grid two">
+<label>前景色<input id="qrDark" type="color" value="#0e0e11"></label>
+<label>背景色<input id="qrLight" type="color" value="#ffffff"></label>
+</div>
+<button class="btn" onclick="generateQR()">生成二维码</button>
+<button class="ghost" onclick="downloadCanvas('qrCanvas','qrcode.png')">下载 PNG</button>
+<div class="canvas-wrap"><canvas id="qrCanvas" width="260" height="260"></canvas></div>
+</section>`
+	case "social":
+		return `<section class="tool-panel">
+<label for="cardTitle">标题</label>
+<input id="cardTitle" value="Browser Tool Suite">
+<label for="cardSubtitle">副标题</label>
+<input id="cardSubtitle" value="Compress, convert, resize and create useful assets locally.">
+<label for="cardAccent">强调色</label>
+<input id="cardAccent" type="color" value="#d4ff57">
+<button class="btn" onclick="renderSocialCard(true)">生成并下载卡片</button>
+<div class="canvas-wrap wide"><canvas id="socialCanvas" width="1200" height="630"></canvas></div>
+</section>`
+	case "gradient":
+		return `<section class="tool-panel">
+<label for="gradientDirection">方向</label>
+<select id="gradientDirection"><option value="135deg">Diagonal</option><option value="90deg">Horizontal</option><option value="180deg">Vertical</option><option value="45deg">Soft angle</option></select>
+<button class="btn" onclick="generateGradient()">随机生成配色</button>
+<div id="gradientPreview" class="gradient-preview"></div>
+<pre id="gradientCode" class="output"></pre>
+</section>`
+	}
+	switch page.PageTool {
+	case "convert":
+		return imageToolHTML("输出格式", `<div class="choices"><button class="chip on" onclick="setFormat('image/jpeg','JPG',this)">JPG</button><button class="chip" onclick="setFormat('image/png','PNG',this)">PNG</button><button class="chip" onclick="setFormat('image/webp','WebP',this)">WebP</button></div>`, "转换格式", "convertImage()")
+	case "resize":
+		return imageToolHTML("输出尺寸", `<div class="grid two"><input id="resizeW" type="number" value="200" min="1" max="12000" aria-label="宽度"><input id="resizeH" type="number" value="200" min="1" max="12000" aria-label="高度"></div><div class="choices"><button class="chip on" onclick="setResizeMode('contain',this)">留白适配</button><button class="chip" onclick="setResizeMode('cover',this)">裁剪填满</button><button class="chip" onclick="setResizeMode('stretch',this)">拉伸</button></div>`, "调整尺寸", "resizeImage()")
+	case "batch":
+		return `<section class="tool-panel">
+<div class="pro-kicker">PRO TOOL</div>
+<h2>批量图片压缩</h2>
+<p>一次选择多张图片，统一压缩到指定大小，适合电商图、证件资料、社媒素材和表单上传前的批处理。</p>
+<a class="btn link-btn" href="/">先使用免费单张压缩</a>
+</section>`
+	default:
+		return imageToolHTML("目标文件大小", `<div class="grid unit"><input id="targetKB" type="number" value="200" min="10" max="20000"><span>KB</span></div><div class="choices"><button class="chip" onclick="setTarget(100)">100 KB</button><button class="chip on" onclick="setTarget(200)">200 KB</button><button class="chip" onclick="setTarget(500)">500 KB</button><button class="chip" onclick="setTarget(1024)">1 MB</button></div>`, "开始压缩", "compressImage()")
+	}
+}
+
+func imageToolHTML(label, controls, actionLabel, action string) string {
+	return `<section class="tool-panel">
+<label for="imageInput">选择图片</label>
+<input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" onchange="loadImageFile(this.files[0])">
+<div id="imageInfo" class="hint">支持 JPG、PNG、WebP。图片在浏览器本地处理。</div>
+<label>` + label + `</label>
+` + controls + `
+<button class="btn" onclick="` + action + `">` + actionLabel + `</button>
+<div class="canvas-wrap"><canvas id="imageCanvas"></canvas></div>
+<div id="status" class="hint"></div>
+</section>`
+}
+
+func relatedLinksHTML(page publicPage) string {
+	links := make([]string, 0, 5)
+	for _, item := range publicPages {
+		if item.Path == page.Path {
+			continue
+		}
+		if item.Path == "/" || item.Kind == page.Kind || len(links) < 3 {
+			links = append(links, fmt.Sprintf(`<a href="%s">%s</a>`, html.EscapeString(item.Path), html.EscapeString(item.Heading)))
+		}
+		if len(links) >= 5 {
+			break
+		}
+	}
+	return strings.Join(links, "")
+}
+
+func landingScript(page publicPage) string {
+	if page.PageUtility != "" {
+		return utilityLandingScript(page.PageUtility)
+	}
+	if page.PageTool == "batch" {
+		return ""
+	}
+	return imageLandingScript()
+}
+
+func utilityLandingScript(tool string) string {
+	switch tool {
+	case "csv":
+		return `function parseCSV(text){const rows=[];let row=[],cell='',quote=false;for(let i=0;i<text.length;i++){const ch=text[i],next=text[i+1];if(ch==='"'&&quote&&next==='"'){cell+='"';i++;}else if(ch==='"'){quote=!quote;}else if(ch===','&&!quote){row.push(cell.trim());cell='';}else if((ch==='\n'||ch==='\r')&&!quote){if(ch==='\r'&&next==='\n')i++;row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);row=[];cell='';}else{cell+=ch;}}row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);return rows;}
+function convertCSV(){const rows=parseCSV(document.getElementById('csvInput').value);const out=document.getElementById('jsonOutput');if(rows.length<2){out.textContent='请粘贴带表头的 CSV 内容。';return;}const headers=rows[0];const data=rows.slice(1).map(row=>{const item={};headers.forEach((header,index)=>{item[header||('field_'+index)]=row[index]||'';});return item;});out.textContent=JSON.stringify(data,null,2);}
+convertCSV();`
+	case "markdown":
+		return `function escapeHTML(value){return value.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function inlineMarkdown(text){return escapeHTML(text).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');}
+function markdownToHTML(markdown){const lines=markdown.split(/\r?\n/);let html='',inList=false;for(const raw of lines){const line=raw.trim();if(!line){if(inList){html+='</ul>';inList=false;}continue;}if(line.startsWith('# ')){if(inList){html+='</ul>';inList=false;}html+='<h1>'+inlineMarkdown(line.slice(2))+'</h1>';}else if(line.startsWith('## ')){if(inList){html+='</ul>';inList=false;}html+='<h2>'+inlineMarkdown(line.slice(3))+'</h2>';}else if(line.startsWith('- ')){if(!inList){html+='<ul>';inList=true;}html+='<li>'+inlineMarkdown(line.slice(2))+'</li>';}else{if(inList){html+='</ul>';inList=false;}html+='<p>'+inlineMarkdown(line)+'</p>';}}if(inList)html+='</ul>';return html;}
+function renderMarkdown(print){const html=markdownToHTML(document.getElementById('markdownInput').value);document.getElementById('markdownPreview').innerHTML=html;if(print){const w=window.open('','_blank');w.document.write('<!doctype html><html><head><title>Markdown PDF</title><style>body{font-family:Arial,sans-serif;max-width:760px;margin:40px auto;line-height:1.65;color:#111}</style></head><body>'+html+'<script>window.print()<\/script></body></html>');w.document.close();}}
+renderMarkdown(false);`
+	case "qr":
+		return `function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
+function downloadCanvas(id,filename){document.getElementById(id).toBlob(blob=>{if(blob)downloadBlob(blob,filename);},'image/png');}
+function generateQR(){const text=document.getElementById('qrText').value.trim();const canvas=document.getElementById('qrCanvas');const ctx=canvas.getContext('2d');if(!text)return;if(!window.qrcode){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#111';ctx.fillText('二维码库加载失败',72,128);return;}const qr=qrcode(0,'M');qr.addData(text);qr.make();const count=qr.getModuleCount();const margin=16;const cell=Math.floor((canvas.width-margin*2)/count);const size=cell*count;const offset=Math.floor((canvas.width-size)/2);ctx.fillStyle=document.getElementById('qrLight').value;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=document.getElementById('qrDark').value;for(let row=0;row<count;row++){for(let col=0;col<count;col++){if(qr.isDark(row,col))ctx.fillRect(offset+col*cell,offset+row*cell,cell,cell);}}}
+generateQR();`
+	case "social":
+		return `function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
+function wrapCanvasText(ctx,text,x,y,maxWidth,lineHeight){const words=text.split(/\s+/);let line='';for(const word of words){const test=line?line+' '+word:word;if(ctx.measureText(test).width>maxWidth&&line){ctx.fillText(line,x,y);line=word;y+=lineHeight;}else{line=test;}}if(line)ctx.fillText(line,x,y);}
+function renderSocialCard(download){const canvas=document.getElementById('socialCanvas');const ctx=canvas.getContext('2d');const accent=document.getElementById('cardAccent').value||'#d4ff57';ctx.fillStyle='#0e0e11';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=accent;ctx.fillRect(0,0,26,canvas.height);ctx.fillStyle='#fff';ctx.font='800 72px sans-serif';wrapCanvasText(ctx,document.getElementById('cardTitle').value||'Browser Tool Suite',95,230,960,82);ctx.fillStyle='#b7b7b7';ctx.font='400 30px sans-serif';wrapCanvasText(ctx,document.getElementById('cardSubtitle').value||'Useful tools that run locally in your browser.',100,400,920,42);if(download)canvas.toBlob(blob=>downloadBlob(blob,'social-card.png'),'image/png');}
+renderSocialCard(false);`
+	case "gradient":
+		return `function randomColor(){return '#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');}
+function generateGradient(){const colors=[randomColor(),randomColor(),randomColor()];const direction=document.getElementById('gradientDirection').value;const css='linear-gradient('+direction+', '+colors.join(', ')+')';document.getElementById('gradientPreview').style.background=css;document.getElementById('gradientCode').textContent='background: '+css+';';}
+generateGradient();`
+	default:
+		return ""
+	}
+}
+
+func imageLandingScript() string {
+	return `let selectedFile=null,selectedImage=null,outputType='image/jpeg',outputLabel='JPG',resizeMode='contain';
+function setStatus(msg){const el=document.getElementById('status');if(el)el.textContent=msg;}
+function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
+function loadImageFile(file){if(!file||!file.type.startsWith('image/')){setStatus('请选择图片文件');return;}selectedFile=file;const img=new Image();img.onload=()=>{selectedImage=img;const canvas=document.getElementById('imageCanvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);document.getElementById('imageInfo').textContent=file.name+' · '+(file.size/1024).toFixed(1)+' KB';};img.src=URL.createObjectURL(file);}
+function setTarget(kb){const input=document.getElementById('targetKB');if(input)input.value=kb;}
+function setFormat(type,label,el){outputType=type;outputLabel=label;document.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
+function setResizeMode(mode,el){resizeMode=mode;document.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
+function imageToBlob(canvas,type,quality){return new Promise(resolve=>canvas.toBlob(resolve,type,quality));}
+async function compressImage(){if(!selectedFile||!selectedImage){setStatus('请先选择图片');return;}const targetBytes=(parseFloat(document.getElementById('targetKB').value)||200)*1024;const canvas=document.getElementById('imageCanvas');let low=.02,high=.95,best=null;for(let i=0;i<10;i++){const q=(low+high)/2;const blob=await imageToBlob(canvas,'image/jpeg',q);if(blob.size<=targetBytes){best=blob;low=q;}else{high=q;}}if(!best)best=await imageToBlob(canvas,'image/jpeg',.02);downloadBlob(best,'compressed_'+selectedFile.name.replace(/\.[^.]+$/,'')+'.jpg');setStatus('已压缩到 '+(best.size/1024).toFixed(1)+' KB');}
+async function convertImage(){if(!selectedFile||!selectedImage){setStatus('请先选择图片');return;}const canvas=document.getElementById('imageCanvas');const ctx=canvas.getContext('2d');if(outputType==='image/jpeg'){ctx.globalCompositeOperation='destination-over';ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalCompositeOperation='source-over';}const blob=await imageToBlob(canvas,outputType,.92);const ext=outputType==='image/png'?'.png':outputType==='image/webp'?'.webp':'.jpg';downloadBlob(blob,'converted_'+selectedFile.name.replace(/\.[^.]+$/,'')+ext);setStatus('已转换为 '+outputLabel+' · '+(blob.size/1024).toFixed(1)+' KB');}
+async function resizeImage(){if(!selectedFile||!selectedImage){setStatus('请先选择图片');return;}const width=parseInt(document.getElementById('resizeW').value,10),height=parseInt(document.getElementById('resizeH').value,10);if(!width||!height){setStatus('请输入有效宽高');return;}const canvas=document.getElementById('imageCanvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);let sx=0,sy=0,sw=selectedImage.naturalWidth,sh=selectedImage.naturalHeight,dx=0,dy=0,dw=width,dh=height;if(resizeMode==='contain'){const scale=Math.min(width/sw,height/sh);dw=sw*scale;dh=sh*scale;dx=(width-dw)/2;dy=(height-dh)/2;}else if(resizeMode==='cover'){const target=width/height,ratio=sw/sh;if(ratio>target){sw=sh*target;sx=(selectedImage.naturalWidth-sw)/2;}else{sh=sw/target;sy=(selectedImage.naturalHeight-sh)/2;}}ctx.drawImage(selectedImage,sx,sy,sw,sh,dx,dy,dw,dh);const blob=await imageToBlob(canvas,'image/jpeg',.92);downloadBlob(blob,'resized_'+selectedFile.name.replace(/\.[^.]+$/,'')+'_'+width+'x'+height+'.jpg');setStatus('已转换为 '+width+'x'+height+' · '+(blob.size/1024).toFixed(1)+' KB');}`
+}
+
+const landingHTML = `<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__PAGE_TITLE__</title>
+<meta name="description" content="__PAGE_DESCRIPTION__">
+<link rel="canonical" href="__CANONICAL_URL__">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+__QR_SCRIPT__
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0e0e11;--surface:#18181d;--surface2:#222228;--border:rgba(255,255,255,.08);--accent:#d4ff57;--accent-dim:rgba(212,255,87,.1);--text:#f2f2f2;--muted:#8c8c8c}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:48px 22px 72px}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:44px}
+.brand{color:var(--accent);font-family:'Syne',sans-serif;font-weight:800;text-decoration:none}
+.home{color:var(--muted);font-size:13px;text-decoration:none}
+.badge{display:inline-flex;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(212,255,87,.24);border-radius:999px;padding:6px 11px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px}
+h1{font-family:'Syne',sans-serif;font-size:clamp(34px,7vw,58px);line-height:1.04;margin-bottom:16px}
+h1 em{display:block;color:var(--accent);font-style:normal}
+.intro{color:var(--muted);font-size:16px;line-height:1.7;max-width:620px;margin-bottom:26px}
+.tool-panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin:26px 0}
+label{display:grid;gap:8px;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin:12px 0}
+textarea,input,select{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);padding:13px 14px;font:inherit;outline:none}
+textarea{min-height:170px;resize:vertical;line-height:1.55}
+textarea:focus,input:focus,select:focus{border-color:var(--accent)}
+.grid{display:grid;gap:12px}.two{grid-template-columns:1fr 1fr}.unit{grid-template-columns:1fr auto;align-items:center}
+.btn{display:inline-flex;justify-content:center;width:100%;background:var(--accent);color:#0e0e11;border:0;border-radius:12px;padding:15px 18px;margin-top:14px;font-family:'Syne',sans-serif;font-weight:800;cursor:pointer;text-decoration:none}
+.ghost,.chip{border:1px solid var(--border);background:transparent;color:var(--text);border-radius:10px;padding:10px 12px;font-weight:800;cursor:pointer;margin-top:10px}
+.choices{display:flex;gap:8px;flex-wrap:wrap}.chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.output{background:var(--surface2);border:1px solid var(--border);border-radius:12px;min-height:170px;padding:16px;margin-top:16px;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.55}
+.preview{font-family:'DM Sans',sans-serif}.preview h1,.preview h2{font-family:'Syne',sans-serif;margin:0 0 10px}.preview p,.preview li{line-height:1.65;margin-bottom:8px}
+.canvas-wrap{display:flex;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;overflow:auto}
+.canvas-wrap canvas{max-width:100%;height:auto}.wide canvas{width:100%;max-width:520px}.gradient-preview{height:210px;border-radius:12px;border:1px solid var(--border);margin-top:16px}
+.hint{color:var(--muted);font-size:13px;line-height:1.6;margin-top:10px}.pro-kicker{display:inline-flex;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(212,255,87,.24);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}
+.seo-copy{color:var(--muted);line-height:1.7;margin:26px 0}.seo-copy h2{font-family:'Syne',sans-serif;color:var(--text);font-size:22px;margin-bottom:10px}
+.related{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:30px}.related a{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);text-decoration:none;padding:12px;font-weight:800}
+@media(max-width:620px){.two,.related{grid-template-columns:1fr}.wrap{padding-top:30px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<nav class="top"><a class="brand" href="/">OnlineBox</a><a class="home" href="/">全部工具</a></nav>
+<div class="badge">Focused browser tool</div>
+<h1>__PAGE_HEADING__<em>__PAGE_ACCENT__</em></h1>
+<p class="intro">__PAGE_INTRO__</p>
+__PRIMARY_TOOL__
+<section class="seo-copy">
+<h2>这个工具适合什么场景？</h2>
+<p>本页面只围绕「__PAGE_HEADING__」这个工具展开，页面标题、描述、主标题、工具输入区和说明内容都服务同一个搜索意图。工具在浏览器本地运行，适合快速处理日常文件和运营素材。</p>
+</section>
+<section class="related" aria-label="相关工具">__RELATED_LINKS__</section>
+</main>
+<script>
+__LANDING_SCRIPT__
+</script>
+</body>
+</html>`
 
 func jsString(value string) string {
 	encoded, err := json.Marshal(value)
