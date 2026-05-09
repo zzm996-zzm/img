@@ -248,6 +248,9 @@ func TestHandleIndexRendersRouteSpecificSEO(t *testing.T) {
 		"<h1>图片格式转换<em>JPG、PNG、WebP 免费互转</em></h1>",
 		`<link rel="canonical" href="https://onlinebox.site/image-converter">`,
 		`function convertImage()`,
+		"如何使用图片格式转换？",
+		"图片格式转换适合哪些场景？",
+		"常见问题",
 		`href="/image-compressor"`,
 	} {
 		if !strings.Contains(body, expected) {
@@ -281,6 +284,9 @@ func TestHandleIndexRendersUtilityLandingPage(t *testing.T) {
 		"<h1>CSV 转 JSON<em>免费在线表格数据转换</em></h1>",
 		`<link rel="canonical" href="https://onlinebox.site/csv-to-json">`,
 		`function convertCSV()`,
+		"如何使用 CSV 转 JSON 工具",
+		"CSV 转 JSON 适合哪些场景？",
+		"CSV 转 JSON 常见问题",
 		`href="/image-compressor"`,
 	} {
 		if !strings.Contains(body, expected) {
@@ -291,6 +297,7 @@ func TestHandleIndexRendersUtilityLandingPage(t *testing.T) {
 		`id="qrText"`,
 		`id="markdownInput"`,
 		"Live Browser Tools",
+		"本页面只围绕",
 	} {
 		if strings.Contains(body, unexpected) {
 			t.Fatalf("expected focused page to omit %q", unexpected)

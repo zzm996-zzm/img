@@ -279,6 +279,7 @@ func renderLandingHTML(page publicPage) string {
 		"__PAGE_ACCENT__", html.EscapeString(page.Accent),
 		"__PAGE_INTRO__", html.EscapeString(page.Intro),
 		"__PRIMARY_TOOL__", landingToolHTML(page),
+		"__GUIDE_CONTENT__", landingGuideHTML(page),
 		"__RELATED_LINKS__", relatedLinksHTML(page),
 		"__QR_SCRIPT__", qrScriptTag(page),
 		"__LANDING_SCRIPT__", landingScript(page),
@@ -394,6 +395,77 @@ func relatedLinksHTML(page publicPage) string {
 	return strings.Join(links, "")
 }
 
+func landingGuideHTML(page publicPage) string {
+	switch page.Path {
+	case "/csv-to-json":
+		return `<section class="guide">
+<h2>如何使用 CSV 转 JSON 工具</h2>
+<ol>
+<li>把带表头的 CSV 内容粘贴到输入框，例如 name,email,plan。</li>
+<li>点击“转换为 JSON”，工具会把第一行识别为字段名，把后续每一行转换成一个 JSON 对象。</li>
+<li>检查右侧或下方输出结果，确认字段名和数据行对应正确后再使用。</li>
+</ol>
+<h2>CSV 转 JSON 适合哪些场景？</h2>
+<p>CSV 转 JSON 常用于接口调试、运营表格整理、批量导入前的数据预处理、低代码工具配置和前端 mock 数据制作。这个工具适合处理简单表格：第一行是字段名，后面的每一行是数据。转换过程在浏览器本地完成，不需要把表格内容上传到服务器。</p>
+<h2>转换前需要注意什么？</h2>
+<p>建议先确认 CSV 第一行是清晰的英文或拼音字段名，例如 title、email、price、status。字段名为空时，工具会自动生成 field_0、field_1 这样的兜底字段。包含逗号的内容请使用英文双引号包裹，这样解析结果会更稳定。</p>
+<section class="faq-block">
+<h2>CSV 转 JSON 常见问题</h2>
+<details open><summary>CSV 第一行必须是表头吗？</summary><p>建议必须有表头。工具会把第一行作为 JSON 对象的 key，如果没有表头，输出结果会缺少可读字段名。</p></details>
+<details><summary>数据会上传到服务器吗？</summary><p>不会。当前转换逻辑在浏览器里运行，输入内容不会因为转换操作发送到服务器。</p></details>
+<details><summary>支持带引号和逗号的 CSV 吗？</summary><p>支持常见的英文双引号写法，例如 "New York, USA" 会被识别为一个单元格。</p></details>
+<details><summary>可以转换 Excel 文件吗？</summary><p>当前页面处理的是粘贴后的 CSV 文本。如果你有 Excel 文件，可以先另存为 CSV，再复制内容到这里转换。</p></details>
+</section>
+</section>`
+	case "/image-compressor":
+		return imageGuideHTML("图片压缩到指定KB", "上传图片后输入目标大小，例如 200KB、500KB 或 1MB，然后点击开始压缩。工具会在浏览器中尝试用合适的 JPG 质量输出更小的文件。", "适合报名表、证件资料、招聘网站、电商后台和社交平台上传前压缩图片。")
+	case "/image-converter":
+		return imageGuideHTML("图片格式转换", "选择 JPG、PNG 或 WebP 作为输出格式，再上传图片并点击转换。转换完成后会自动下载新格式图片。", "适合把 PNG 透明图转成 JPG、把网页图片转成 WebP，或把不兼容格式改成常见格式。")
+	case "/image-resizer":
+		return imageGuideHTML("图片尺寸转换", "输入目标宽度和高度，选择留白适配、裁剪填满或拉伸，然后上传图片并转换尺寸。", "适合头像、商品主图、社媒封面、表单上传尺寸和固定比例素材处理。")
+	case "/qr-code-generator":
+		return utilityGuideHTML("二维码生成器", "输入链接或文本，选择前景色和背景色，点击生成后下载 PNG。", "适合活动链接、菜单链接、社交主页、名片和线下物料。")
+	case "/markdown-to-pdf":
+		return utilityGuideHTML("Markdown 转 PDF", "粘贴 Markdown 文本，点击预览并打印 PDF，浏览器会打开打印窗口。", "适合项目笔记、说明文档、会议纪要和轻量排版。")
+	case "/social-card-maker":
+		return utilityGuideHTML("社交媒体卡片制作", "填写标题、副标题和强调色，生成 1200x630 分享图。", "适合博客封面、产品更新、社媒分享和活动预告。")
+	case "/gradient-generator":
+		return utilityGuideHTML("渐变配色生成器", "选择渐变方向后随机生成配色，并复制 CSS background 代码。", "适合网页背景、海报、卡片设计和产品视觉探索。")
+	default:
+		return utilityGuideHTML(page.Heading, page.Intro, "适合日常文件处理和浏览器本地快速转换。")
+	}
+}
+
+func imageGuideHTML(name, how, scenario string) string {
+	return fmt.Sprintf(`<section class="guide">
+<h2>如何使用%s？</h2>
+<ol><li>%s</li><li>处理完成后检查输出文件大小、格式或尺寸是否符合目标平台要求。</li><li>如果结果不理想，可以调整参数后重新处理。</li></ol>
+<h2>%s适合哪些场景？</h2>
+<p>%s所有处理都在浏览器本地完成，图片不需要上传服务器，适合处理个人资料、商品图片和临时素材。</p>
+<section class="faq-block">
+<h2>常见问题</h2>
+<details open><summary>图片会上传到服务器吗？</summary><p>不会。当前工具使用浏览器本地能力处理图片，服务器只负责提供页面。</p></details>
+<details><summary>支持哪些图片格式？</summary><p>支持常见的 JPG、PNG 和 WebP。不同浏览器对输出格式的支持可能略有差异。</p></details>
+<details><summary>处理后的图片在哪里？</summary><p>转换或压缩完成后，浏览器会自动下载结果文件到你的默认下载目录。</p></details>
+</section>
+</section>`, html.EscapeString(name), html.EscapeString(how), html.EscapeString(name), html.EscapeString(scenario))
+}
+
+func utilityGuideHTML(name, how, scenario string) string {
+	return fmt.Sprintf(`<section class="guide">
+<h2>如何使用%s？</h2>
+<p>%s</p>
+<h2>%s适合哪些场景？</h2>
+<p>%s这个工具尽量在浏览器本地完成处理，适合临时、快速、轻量的日常任务。</p>
+<section class="faq-block">
+<h2>常见问题</h2>
+<details open><summary>这个工具免费吗？</summary><p>基础功能可以直接使用。未来如果加入批量处理、模板或高清导出，可能会放入 Pro 工具包。</p></details>
+<details><summary>数据会上传到服务器吗？</summary><p>当前页面的核心处理逻辑在浏览器中运行，适合处理不想上传的小型内容。</p></details>
+<details><summary>手机上可以用吗？</summary><p>可以。页面使用响应式布局，手机浏览器也能打开和处理常见任务。</p></details>
+</section>
+</section>`, html.EscapeString(name), html.EscapeString(how), html.EscapeString(name), html.EscapeString(scenario))
+}
+
 func landingScript(page publicPage) string {
 	if page.PageUtility != "" {
 		return utilityLandingScript(page.PageUtility)
@@ -486,7 +558,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .canvas-wrap{display:flex;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;overflow:auto}
 .canvas-wrap canvas{max-width:100%;height:auto}.wide canvas{width:100%;max-width:520px}.gradient-preview{height:210px;border-radius:12px;border:1px solid var(--border);margin-top:16px}
 .hint{color:var(--muted);font-size:13px;line-height:1.6;margin-top:10px}.pro-kicker{display:inline-flex;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(212,255,87,.24);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}
-.seo-copy{color:var(--muted);line-height:1.7;margin:26px 0}.seo-copy h2{font-family:'Syne',sans-serif;color:var(--text);font-size:22px;margin-bottom:10px}
+.guide{color:var(--muted);line-height:1.75;margin:30px 0}.guide h2{font-family:'Syne',sans-serif;color:var(--text);font-size:22px;margin:26px 0 10px}.guide p{margin-bottom:12px}.guide ol{padding-left:22px;margin:10px 0 18px}.guide li{margin-bottom:8px}.faq-block{margin-top:24px}.faq-block details{border-top:1px solid var(--border);padding:14px 0}.faq-block summary{color:var(--text);font-weight:800;cursor:pointer}.faq-block p{margin:10px 0 0}
 .related{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:30px}.related a{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);text-decoration:none;padding:12px;font-weight:800}
 @media(max-width:620px){.two,.related{grid-template-columns:1fr}.wrap{padding-top:30px}}
 </style>
@@ -498,10 +570,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 <h1>__PAGE_HEADING__<em>__PAGE_ACCENT__</em></h1>
 <p class="intro">__PAGE_INTRO__</p>
 __PRIMARY_TOOL__
-<section class="seo-copy">
-<h2>这个工具适合什么场景？</h2>
-<p>本页面只围绕「__PAGE_HEADING__」这个工具展开，页面标题、描述、主标题、工具输入区和说明内容都服务同一个搜索意图。工具在浏览器本地运行，适合快速处理日常文件和运营素材。</p>
-</section>
+__GUIDE_CONTENT__
 <section class="related" aria-label="相关工具">__RELATED_LINKS__</section>
 </main>
 <script>
