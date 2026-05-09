@@ -217,6 +217,23 @@ func TestHandleRobotsIncludesSitemap(t *testing.T) {
 	}
 }
 
+func TestHandleAdsTXT(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/ads.txt", nil)
+	rr := httptest.NewRecorder()
+
+	handleAdsTXT(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	if got := rr.Header().Get("Content-Type"); !strings.Contains(got, "text/plain") {
+		t.Fatalf("expected text/plain content type, got %q", got)
+	}
+	if body := rr.Body.String(); body != "google.com, pub-1902780696242483, DIRECT, f08c47fec0942fa0\n" {
+		t.Fatalf("unexpected ads.txt body: %q", body)
+	}
+}
+
 func TestHandleFaviconNoContent(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
 	rr := httptest.NewRecorder()

@@ -203,6 +203,7 @@ func main() {
 	mux.HandleFunc("/api/logout", handleLogout)
 	mux.HandleFunc("/api/me", handleMe)
 	mux.HandleFunc("/api/paypal-webhook", handlePayPalWebhook)
+	mux.HandleFunc("/ads.txt", handleAdsTXT)
 	mux.HandleFunc("/robots.txt", handleRobots)
 	mux.HandleFunc("/sitemap.xml", handleSitemap)
 	mux.HandleFunc("/favicon.ico", handleFavicon)
@@ -357,6 +358,8 @@ const googleAnalyticsTag = `<!-- Google tag (gtag.js) -->
 
   gtag('config', 'G-GRDT3349BV');
 </script>`
+
+const adsTXT = "google.com, pub-1902780696242483, DIRECT, f08c47fec0942fa0\n"
 
 const homeHTML = `<!DOCTYPE html>
 <html lang="en">
@@ -868,6 +871,15 @@ func handleRobots(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	fmt.Fprintf(w, "User-agent: *\nAllow: /\n\nSitemap: %s/sitemap.xml\n", siteURL())
+}
+
+func handleAdsTXT(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Write([]byte(adsTXT))
 }
 
 func handleFavicon(w http.ResponseWriter, r *http.Request) {
