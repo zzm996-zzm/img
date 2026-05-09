@@ -61,6 +61,10 @@ type publicPage struct {
 	Path        string
 	Title       string
 	Description string
+	Heading     string
+	Accent      string
+	Intro       string
+	Kind        string
 	PageTool    string
 	PageUtility string
 }
@@ -70,36 +74,60 @@ var publicPages = []publicPage{
 		Path:        "/",
 		Title:       "免费在线工具集 | 图片压缩、格式转换、尺寸转换、二维码与数据工具",
 		Description: "免费在线浏览器工具集，支持图片压缩、格式转换、尺寸转换、批量压缩、二维码生成、社交媒体卡片、CSV转JSON和Markdown转PDF。核心处理在浏览器本地完成。",
+		Heading:     "免费在线工具集",
+		Accent:      "图片、创作与数据处理",
+		Intro:       "压缩图片、转换格式、调整尺寸，并逐步加入二维码、社交媒体卡片、CSV转JSON和Markdown转PDF。核心处理在浏览器本地完成，尽量不占服务器算力。",
+		Kind:        "home",
 		PageTool:    "compress",
 	},
 	{
 		Path:        "/image-compressor",
 		Title:       "图片压缩到指定KB | 免费在线压缩 JPG PNG WebP",
 		Description: "免费在线图片压缩工具，可把 JPG、PNG、WebP 压缩到 200KB、500KB、1MB 等指定大小。浏览器本地处理，图片不上传服务器。",
+		Heading:     "图片压缩到指定KB",
+		Accent:      "JPG、PNG、WebP 本地处理",
+		Intro:       "上传图片后输入目标大小，例如 200KB、500KB 或 1MB，浏览器会在本地压缩并自动下载，不需要上传服务器。",
+		Kind:        "image",
 		PageTool:    "compress",
 	},
 	{
 		Path:        "/image-converter",
 		Title:       "图片格式转换 | 免费 JPG PNG WebP 在线互转",
 		Description: "在线转换图片格式，支持 JPG、PNG、WebP 互转。直接在浏览器本地完成格式转换，适合网页、电商和社交媒体图片处理。",
+		Heading:     "图片格式转换",
+		Accent:      "JPG、PNG、WebP 免费互转",
+		Intro:       "选择图片后即可转换为 JPG、PNG 或 WebP。适合网页素材、电商图片和社交媒体发布前的格式处理。",
+		Kind:        "image",
 		PageTool:    "convert",
 	},
 	{
 		Path:        "/image-resizer",
 		Title:       "图片尺寸转换 | 在线调整图片宽高和头像尺寸",
 		Description: "免费在线调整图片尺寸，支持自定义宽高、头像尺寸、平台上传尺寸、留白适配、裁剪填满和拉伸模式。",
+		Heading:     "图片尺寸转换",
+		Accent:      "头像、社媒和上传尺寸",
+		Intro:       "输入目标宽高，选择留白适配、裁剪填满或拉伸模式，快速生成头像、电商图和平台上传需要的尺寸。",
+		Kind:        "image",
 		PageTool:    "resize",
 	},
 	{
 		Path:        "/batch-image-compressor",
 		Title:       "批量图片压缩 | 多张图片统一压缩处理",
 		Description: "批量图片压缩工具入口，适合电商图、资料图和社交媒体素材统一处理。基础图片工具在浏览器本地运行，Pro 解锁批量能力。",
+		Heading:     "批量图片压缩",
+		Accent:      "多张图片统一处理",
+		Intro:       "面向电商图、资料图和社媒素材的批量处理入口。免费工具可先处理单张图片，Pro 解锁批量能力。",
+		Kind:        "image",
 		PageTool:    "batch",
 	},
 	{
 		Path:        "/qr-code-generator",
 		Title:       "二维码生成器 | 免费在线生成二维码 PNG",
 		Description: "免费在线二维码生成器，可输入链接或文本，自定义前景色和背景色，并下载 PNG 图片。适合活动页、社交媒体和运营素材。",
+		Heading:     "二维码生成器",
+		Accent:      "免费生成 PNG 二维码",
+		Intro:       "输入链接或文本，自定义前景色和背景色，直接在浏览器中生成二维码并下载 PNG 图片。",
+		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "qr",
 	},
@@ -107,6 +135,10 @@ var publicPages = []publicPage{
 		Path:        "/social-card-maker",
 		Title:       "社交媒体卡片制作 | 在线生成分享图片",
 		Description: "在线制作社交媒体分享卡片，输入标题、副标题和强调色，在浏览器中生成适合分享的图片素材。",
+		Heading:     "社交媒体卡片制作",
+		Accent:      "在线生成分享图片",
+		Intro:       "输入标题、副标题和强调色，本地生成一张适合社交媒体分享的图片素材。",
+		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "social",
 	},
@@ -114,6 +146,10 @@ var publicPages = []publicPage{
 		Path:        "/gradient-generator",
 		Title:       "渐变配色生成器 | 免费生成 CSS Gradient",
 		Description: "免费在线生成配色和 CSS 渐变代码，适合网页背景、社交媒体素材、设计稿和落地页视觉探索。",
+		Heading:     "渐变配色生成器",
+		Accent:      "免费生成 CSS Gradient",
+		Intro:       "随机生成配色和 CSS 渐变代码，适合网页背景、社交媒体素材、设计稿和落地页视觉探索。",
+		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "gradient",
 	},
@@ -121,6 +157,10 @@ var publicPages = []publicPage{
 		Path:        "/csv-to-json",
 		Title:       "CSV 转 JSON | 免费在线表格数据转换",
 		Description: "在线把 CSV 内容转换成 JSON，支持带表头的表格数据解析。转换在浏览器本地完成，适合开发、运营和数据整理。",
+		Heading:     "CSV 转 JSON",
+		Accent:      "免费在线表格数据转换",
+		Intro:       "粘贴带表头的 CSV 内容，在浏览器本地转换成 JSON。适合开发调试、运营表格整理和轻量数据清洗。",
+		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "csv",
 	},
@@ -128,6 +168,10 @@ var publicPages = []publicPage{
 		Path:        "/markdown-to-pdf",
 		Title:       "Markdown 转 PDF | 免费在线预览并打印 PDF",
 		Description: "在线把 Markdown 转成可打印预览，并使用浏览器导出 PDF。适合项目笔记、文档草稿和轻量内容排版。",
+		Heading:     "Markdown 转 PDF",
+		Accent:      "免费在线预览并打印 PDF",
+		Intro:       "把 Markdown 转成可打印预览，再使用浏览器导出 PDF。适合项目笔记、文档草稿和轻量内容排版。",
+		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "markdown",
 	},
@@ -205,6 +249,10 @@ func renderIndexHTML(page publicPage) string {
 		"__PAGE_TITLE__":       html.EscapeString(page.Title),
 		"__PAGE_DESCRIPTION__": html.EscapeString(page.Description),
 		"__CANONICAL_URL__":    html.EscapeString(canonical),
+		"__PAGE_HEADING__":     html.EscapeString(page.Heading),
+		"__PAGE_ACCENT__":      html.EscapeString(page.Accent),
+		"__PAGE_INTRO__":       html.EscapeString(page.Intro),
+		"__PAGE_KIND__":        html.EscapeString(page.Kind),
 		"__PAGE_TOOL__":        jsString(page.PageTool),
 		"__PAGE_UTILITY__":     jsString(page.PageUtility),
 	}
@@ -922,7 +970,25 @@ const indexHTML = `<!DOCTYPE html>
 }
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
-.wrap{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:64px 24px 80px}
+.wrap{position:relative;z-index:1;max-width:700px;margin:0 auto;padding:64px 24px 80px;display:flex;flex-direction:column}
+.header{order:1}
+.quota-bar{order:2}
+.card{order:3}
+.features{order:4}
+.section{order:5}
+.utility-lab{order:6}
+.pro-strip{order:7}
+.faq{order:8}
+body.route-utility .utility-lab{order:2;margin-top:0;margin-bottom:20px}
+body.route-utility .quota-bar{order:3}
+body.route-utility .card{order:4}
+body.route-utility .features{order:5}
+body.route-utility .section{order:6}
+body.route-utility .pro-strip{order:7}
+body.route-utility .faq{order:8}
+body.route-utility .utility-lab .section-head{align-items:flex-start}
+body.route-utility .utility-lab .section-title{font-size:18px;color:var(--muted)}
+body.route-utility .utility-lab .section-desc{display:none}
 .badge{display:inline-flex;align-items:center;gap:6px;background:var(--accent-dim);border:1px solid rgba(212,255,87,0.25);color:var(--accent);font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;border-radius:20px;margin-bottom:20px}
 .badge-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s ease-in-out infinite}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
@@ -1108,15 +1174,15 @@ h1 em{color:var(--accent);font-style:normal}
 .auth-msg.ok{color:var(--success)}
 </style>
 </head>
-<body>
+<body class="route-__PAGE_KIND__">
 <div class="wrap">
   <div class="header">
     <div class="account-bar">
       <button class="account-pill" id="accountPill" onclick="showAuthModal()">登录 / 注册</button>
     </div>
     <div class="badge"><span class="badge-dot"></span>Browser Tool Suite</div>
-    <h1>免费在线工具集<br><em>图片、创作与数据处理</em></h1>
-    <p class="desc">压缩图片、转换格式、调整尺寸，并逐步加入二维码、社交媒体卡片、CSV转JSON和Markdown转PDF。核心处理在浏览器本地完成，尽量不占服务器算力。</p>
+    <h1>__PAGE_HEADING__<br><em>__PAGE_ACCENT__</em></h1>
+    <p class="desc">__PAGE_INTRO__</p>
   </div>
 
   <!-- 免费次数进度条 -->
@@ -1230,25 +1296,25 @@ h1 em{color:var(--accent);font-style:normal}
         <div class="tool-top"><span class="tool-icon">🎯</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">图片压缩到指定KB</div>
         <div class="tool-copy">把 JPG、PNG、WebP 压缩到 200KB、500KB、1MB 等目标大小，适合表单、招聘网站和证件材料上传。</div>
-        <a class="tool-action" href="/image-compressor" onclick="event.preventDefault(); jumpTool('compress')">开始压缩</a>
+        <a class="tool-action" href="/image-compressor">开始压缩</a>
       </div>
       <div class="tool-card">
         <div class="tool-top"><span class="tool-icon">🔁</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">图片格式转换</div>
         <div class="tool-copy">免费将图片转换为 JPG、PNG 或 WebP，全部在浏览器中完成，不需要上传服务器。</div>
-        <a class="tool-action" href="/image-converter" onclick="event.preventDefault(); jumpTool('convert')">转换格式</a>
+        <a class="tool-action" href="/image-converter">转换格式</a>
       </div>
       <div class="tool-card">
         <div class="tool-top"><span class="tool-icon">📐</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">图片尺寸转换</div>
         <div class="tool-copy">自定义宽高，支持留白适配、裁剪填满和拉伸，快速生成头像、社媒和平台上传尺寸。</div>
-        <a class="tool-action" href="/image-resizer" onclick="event.preventDefault(); jumpTool('resize')">调整尺寸</a>
+        <a class="tool-action" href="/image-resizer">调整尺寸</a>
       </div>
       <div class="tool-card pro">
         <div class="tool-top"><span class="tool-icon">📦</span><span class="tool-tag">PRO</span></div>
         <div class="tool-name">批量图片压缩</div>
         <div class="tool-copy">一次处理多张图片，统一压缩设置，适合电商图、资料图和社媒素材批处理。</div>
-        <a class="tool-action" href="/batch-image-compressor" onclick="event.preventDefault(); jumpTool('batch')">解锁批量</a>
+        <a class="tool-action" href="/batch-image-compressor">解锁批量</a>
       </div>
       <div class="tool-card pro coming">
         <div class="tool-top"><span class="tool-icon">✂️</span><span class="tool-tag">PRO SOON</span></div>
@@ -1275,19 +1341,19 @@ h1 em{color:var(--accent);font-style:normal}
         <div class="tool-top"><span class="tool-icon">▦</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">二维码生成器</div>
         <div class="tool-copy">生成基础二维码，可自定义前景色和背景色，适合链接、活动页和社媒运营。</div>
-        <a class="tool-action" href="/qr-code-generator" onclick="event.preventDefault(); openUtility('qr')">生成二维码</a>
+        <a class="tool-action" href="/qr-code-generator">生成二维码</a>
       </div>
       <div class="tool-card">
         <div class="tool-top"><span class="tool-icon">🖼</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">社交媒体卡片制作</div>
         <div class="tool-copy">输入标题和副标题，本地生成一张适合社媒分享的卡片图，后续 Pro 解锁更多模板。</div>
-        <a class="tool-action" href="/social-card-maker" onclick="event.preventDefault(); openUtility('social')">制作卡片</a>
+        <a class="tool-action" href="/social-card-maker">制作卡片</a>
       </div>
       <div class="tool-card">
         <div class="tool-top"><span class="tool-icon">🎨</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">配色与渐变生成器</div>
         <div class="tool-copy">随机生成配色和 CSS 渐变，快速复制到设计稿、落地页或社媒素材里。</div>
-        <a class="tool-action" href="/gradient-generator" onclick="event.preventDefault(); openUtility('gradient')">生成配色</a>
+        <a class="tool-action" href="/gradient-generator">生成配色</a>
       </div>
     </div>
   </section>
@@ -1302,13 +1368,13 @@ h1 em{color:var(--accent);font-style:normal}
         <div class="tool-top"><span class="tool-icon">{} </span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">CSV / Excel 转 JSON</div>
         <div class="tool-copy">粘贴 CSV 内容，在浏览器本地转换成 JSON。Pro 方向是字段映射、批量文件和保存转换规则。</div>
-        <a class="tool-action" href="/csv-to-json" onclick="event.preventDefault(); openUtility('csv')">转换 JSON</a>
+        <a class="tool-action" href="/csv-to-json">转换 JSON</a>
       </div>
       <div class="tool-card">
         <div class="tool-top"><span class="tool-icon">📄</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">Markdown 导出 PDF</div>
         <div class="tool-copy">把 Markdown 转成可打印预览，直接使用浏览器打印为 PDF。后续 Pro 支持高级模板。</div>
-        <a class="tool-action" href="/markdown-to-pdf" onclick="event.preventDefault(); openUtility('markdown')">打开编辑器</a>
+        <a class="tool-action" href="/markdown-to-pdf">打开编辑器</a>
       </div>
       <div class="tool-card pro coming">
         <div class="tool-top"><span class="tool-icon">⚙️</span><span class="tool-tag">PRO SOON</span></div>

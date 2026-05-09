@@ -245,8 +245,35 @@ func TestHandleIndexRendersRouteSpecificSEO(t *testing.T) {
 	body := rr.Body.String()
 	for _, expected := range []string{
 		"<title>图片格式转换 | 免费 JPG PNG WebP 在线互转</title>",
+		`<body class="route-image">`,
+		"<h1>图片格式转换<br><em>JPG、PNG、WebP 免费互转</em></h1>",
 		`<link rel="canonical" href="https://onlinebox.site/image-converter">`,
 		`const INITIAL_PAGE_TOOL = "convert";`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected body to contain %q", expected)
+		}
+	}
+}
+
+func TestHandleIndexRendersUtilityLandingPage(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/csv-to-json", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>CSV 转 JSON | 免费在线表格数据转换</title>",
+		`<body class="route-utility">`,
+		"<h1>CSV 转 JSON<br><em>免费在线表格数据转换</em></h1>",
+		`<link rel="canonical" href="https://onlinebox.site/csv-to-json">`,
+		`const INITIAL_PAGE_UTILITY = "csv";`,
+		`href="/image-compressor"`,
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected body to contain %q", expected)
