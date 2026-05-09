@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -64,6 +65,8 @@ func main() {
 	mux.HandleFunc("/api/logout", handleLogout)
 	mux.HandleFunc("/api/me", handleMe)
 	mux.HandleFunc("/api/paypal-webhook", handlePayPalWebhook)
+	mux.HandleFunc("/robots.txt", handleRobots)
+	mux.HandleFunc("/sitemap.xml", handleSitemap)
 	mux.HandleFunc("/google6409d0c57bc30ecb.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte("google-site-verification: google6409d0c57bc30ecb.html"))
@@ -94,8 +97,68 @@ func listenAndServe(handler http.Handler, port string, fatal bool) {
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(indexHTML))
+}
+
+func handleRobots(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	fmt.Fprintf(w, "User-agent: *\nAllow: /\n\nSitemap: %s/sitemap.xml\n", siteURL())
+}
+
+type sitemapURLSet struct {
+	XMLName xml.Name     `xml:"urlset"`
+	Xmlns   string       `xml:"xmlns,attr"`
+	URLs    []sitemapURL `xml:"url"`
+}
+
+type sitemapURL struct {
+	Loc        string `xml:"loc"`
+	LastMod    string `xml:"lastmod,omitempty"`
+	ChangeFreq string `xml:"changefreq,omitempty"`
+	Priority   string `xml:"priority,omitempty"`
+}
+
+func handleSitemap(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	w.Write([]byte(xml.Header))
+	if err := xml.NewEncoder(w).Encode(sitemapURLSet{
+		Xmlns: "http://www.sitemaps.org/schemas/sitemap/0.9",
+		URLs: []sitemapURL{
+			{
+				Loc:        siteURL() + "/",
+				LastMod:    time.Now().UTC().Format("2006-01-02"),
+				ChangeFreq: "weekly",
+				Priority:   "1.0",
+			},
+		},
+	}); err != nil {
+		log.Printf("sitemap encode error: %v", err)
+	}
+}
+
+func siteURL() string {
+	raw := strings.TrimSpace(os.Getenv("SITE_URL"))
+	if raw == "" {
+		raw = "https://onlinebox.site"
+	}
+	return strings.TrimRight(raw, "/")
 }
 
 func openDB() (*sql.DB, error) {
@@ -712,6 +775,7 @@ const indexHTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>免费在线工具集 | 图片压缩、格式转换、尺寸转换、二维码与数据工具</title>
 <meta name="description" content="免费在线浏览器工具集，支持图片压缩、格式转换、尺寸转换、批量压缩、背景移除、二维码生成、社交媒体卡片、CSV转JSON和Markdown转PDF。核心处理在浏览器本地完成。">
+<link rel="canonical" href="https://onlinebox.site/">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1902780696242483" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>

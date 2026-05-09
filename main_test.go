@@ -3,12 +3,19 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+type testSitemapURLSet struct {
+	URLs []struct {
+		Loc string `xml:"loc"`
+	} `xml:"url"`
+}
 
 func setupTestDB(t *testing.T) *sql.DB {
 	t.Helper()
@@ -151,5 +158,53 @@ func TestRefundRevokesPaidLicense(t *testing.T) {
 	}
 	if isPaidEmail("buyer@example.com") {
 		t.Fatalf("expected refunded capture to revoke paid license")
+	}
+}
+
+func TestHandleSitemap(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/sitemap.xml", nil)
+	rr := httptest.NewRecorder()
+
+	handleSitemap(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	if got := rr.Header().Get("Content-Type"); !strings.Contains(got, "application/xml") {
+		t.Fatalf("expected xml content type, got %q", got)
+	}
+	var parsed testSitemapURLSet
+	if err := xml.Unmarshal(rr.Body.Bytes(), &parsed); err != nil {
+		t.Fatalf("decode sitemap: %v body=%s", err, rr.Body.String())
+	}
+	if len(parsed.URLs) != 1 || parsed.URLs[0].Loc != "https://onlinebox.site/" {
+		t.Fatalf("unexpected sitemap urls: %#v", parsed.URLs)
+	}
+}
+
+func TestHandleRobotsIncludesSitemap(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/robots.txt", nil)
+	rr := httptest.NewRecorder()
+
+	handleRobots(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	if body := rr.Body.String(); !strings.Contains(body, "Allow: /") || !strings.Contains(body, "Sitemap: https://onlinebox.site/sitemap.xml") {
+		t.Fatalf("unexpected robots body: %s", body)
+	}
+}
+
+func TestHandleIndexNotFoundForUnknownPath(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/missing-page", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d body=%s", rr.Code, rr.Body.String())
 	}
 }
