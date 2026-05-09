@@ -11,6 +11,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"net/http"
@@ -42,6 +43,12 @@ var (
 	secretKey  string
 )
 
+func init() {
+	for _, page := range publicPages {
+		publicPageByPath[page.Path] = page
+	}
+}
+
 const (
 	sessionCookieName = "imgtools_session"
 	passwordIter      = 120000
@@ -49,6 +56,84 @@ const (
 	authWindow        = 10 * time.Minute
 	authMaxHits       = 30
 )
+
+type publicPage struct {
+	Path        string
+	Title       string
+	Description string
+	PageTool    string
+	PageUtility string
+}
+
+var publicPages = []publicPage{
+	{
+		Path:        "/",
+		Title:       "免费在线工具集 | 图片压缩、格式转换、尺寸转换、二维码与数据工具",
+		Description: "免费在线浏览器工具集，支持图片压缩、格式转换、尺寸转换、批量压缩、二维码生成、社交媒体卡片、CSV转JSON和Markdown转PDF。核心处理在浏览器本地完成。",
+		PageTool:    "compress",
+	},
+	{
+		Path:        "/image-compressor",
+		Title:       "图片压缩到指定KB | 免费在线压缩 JPG PNG WebP",
+		Description: "免费在线图片压缩工具，可把 JPG、PNG、WebP 压缩到 200KB、500KB、1MB 等指定大小。浏览器本地处理，图片不上传服务器。",
+		PageTool:    "compress",
+	},
+	{
+		Path:        "/image-converter",
+		Title:       "图片格式转换 | 免费 JPG PNG WebP 在线互转",
+		Description: "在线转换图片格式，支持 JPG、PNG、WebP 互转。直接在浏览器本地完成格式转换，适合网页、电商和社交媒体图片处理。",
+		PageTool:    "convert",
+	},
+	{
+		Path:        "/image-resizer",
+		Title:       "图片尺寸转换 | 在线调整图片宽高和头像尺寸",
+		Description: "免费在线调整图片尺寸，支持自定义宽高、头像尺寸、平台上传尺寸、留白适配、裁剪填满和拉伸模式。",
+		PageTool:    "resize",
+	},
+	{
+		Path:        "/batch-image-compressor",
+		Title:       "批量图片压缩 | 多张图片统一压缩处理",
+		Description: "批量图片压缩工具入口，适合电商图、资料图和社交媒体素材统一处理。基础图片工具在浏览器本地运行，Pro 解锁批量能力。",
+		PageTool:    "batch",
+	},
+	{
+		Path:        "/qr-code-generator",
+		Title:       "二维码生成器 | 免费在线生成二维码 PNG",
+		Description: "免费在线二维码生成器，可输入链接或文本，自定义前景色和背景色，并下载 PNG 图片。适合活动页、社交媒体和运营素材。",
+		PageTool:    "compress",
+		PageUtility: "qr",
+	},
+	{
+		Path:        "/social-card-maker",
+		Title:       "社交媒体卡片制作 | 在线生成分享图片",
+		Description: "在线制作社交媒体分享卡片，输入标题、副标题和强调色，在浏览器中生成适合分享的图片素材。",
+		PageTool:    "compress",
+		PageUtility: "social",
+	},
+	{
+		Path:        "/gradient-generator",
+		Title:       "渐变配色生成器 | 免费生成 CSS Gradient",
+		Description: "免费在线生成配色和 CSS 渐变代码，适合网页背景、社交媒体素材、设计稿和落地页视觉探索。",
+		PageTool:    "compress",
+		PageUtility: "gradient",
+	},
+	{
+		Path:        "/csv-to-json",
+		Title:       "CSV 转 JSON | 免费在线表格数据转换",
+		Description: "在线把 CSV 内容转换成 JSON，支持带表头的表格数据解析。转换在浏览器本地完成，适合开发、运营和数据整理。",
+		PageTool:    "compress",
+		PageUtility: "csv",
+	},
+	{
+		Path:        "/markdown-to-pdf",
+		Title:       "Markdown 转 PDF | 免费在线预览并打印 PDF",
+		Description: "在线把 Markdown 转成可打印预览，并使用浏览器导出 PDF。适合项目笔记、文档草稿和轻量内容排版。",
+		PageTool:    "compress",
+		PageUtility: "markdown",
+	},
+}
+
+var publicPageByPath = map[string]publicPage{}
 
 func main() {
 	db, err := openDB()
@@ -67,6 +152,7 @@ func main() {
 	mux.HandleFunc("/api/paypal-webhook", handlePayPalWebhook)
 	mux.HandleFunc("/robots.txt", handleRobots)
 	mux.HandleFunc("/sitemap.xml", handleSitemap)
+	mux.HandleFunc("/favicon.ico", handleFavicon)
 	mux.HandleFunc("/google6409d0c57bc30ecb.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte("google-site-verification: google6409d0c57bc30ecb.html"))
@@ -97,7 +183,8 @@ func listenAndServe(handler http.Handler, port string, fatal bool) {
 }
 
 func handleIndex(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
+	page, ok := publicPageByPath[r.URL.Path]
+	if !ok {
 		http.NotFound(w, r)
 		return
 	}
@@ -106,7 +193,34 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(indexHTML))
+	w.Write([]byte(renderIndexHTML(page)))
+}
+
+func renderIndexHTML(page publicPage) string {
+	canonical := siteURL() + page.Path
+	if page.Path == "/" {
+		canonical = siteURL() + "/"
+	}
+	replacements := map[string]string{
+		"__PAGE_TITLE__":       html.EscapeString(page.Title),
+		"__PAGE_DESCRIPTION__": html.EscapeString(page.Description),
+		"__CANONICAL_URL__":    html.EscapeString(canonical),
+		"__PAGE_TOOL__":        jsString(page.PageTool),
+		"__PAGE_UTILITY__":     jsString(page.PageUtility),
+	}
+	rendered := indexHTML
+	for from, to := range replacements {
+		rendered = strings.ReplaceAll(rendered, from, to)
+	}
+	return rendered
+}
+
+func jsString(value string) string {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return `""`
+	}
+	return string(encoded)
 }
 
 func handleRobots(w http.ResponseWriter, r *http.Request) {
@@ -116,6 +230,14 @@ func handleRobots(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	fmt.Fprintf(w, "User-agent: *\nAllow: /\n\nSitemap: %s/sitemap.xml\n", siteURL())
+}
+
+func handleFavicon(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 type sitemapURLSet struct {
@@ -140,17 +262,28 @@ func handleSitemap(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(xml.Header))
 	if err := xml.NewEncoder(w).Encode(sitemapURLSet{
 		Xmlns: "http://www.sitemaps.org/schemas/sitemap/0.9",
-		URLs: []sitemapURL{
-			{
-				Loc:        siteURL() + "/",
-				LastMod:    time.Now().UTC().Format("2006-01-02"),
-				ChangeFreq: "weekly",
-				Priority:   "1.0",
-			},
-		},
+		URLs:  sitemapURLs(),
 	}); err != nil {
 		log.Printf("sitemap encode error: %v", err)
 	}
+}
+
+func sitemapURLs() []sitemapURL {
+	urls := make([]sitemapURL, 0, len(publicPages))
+	lastMod := time.Now().UTC().Format("2006-01-02")
+	for _, page := range publicPages {
+		priority := "0.8"
+		if page.Path == "/" {
+			priority = "1.0"
+		}
+		urls = append(urls, sitemapURL{
+			Loc:        siteURL() + page.Path,
+			LastMod:    lastMod,
+			ChangeFreq: "weekly",
+			Priority:   priority,
+		})
+	}
+	return urls
 }
 
 func siteURL() string {
@@ -773,9 +906,9 @@ const indexHTML = `<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>免费在线工具集 | 图片压缩、格式转换、尺寸转换、二维码与数据工具</title>
-<meta name="description" content="免费在线浏览器工具集，支持图片压缩、格式转换、尺寸转换、批量压缩、背景移除、二维码生成、社交媒体卡片、CSV转JSON和Markdown转PDF。核心处理在浏览器本地完成。">
-<link rel="canonical" href="https://onlinebox.site/">
+<title>__PAGE_TITLE__</title>
+<meta name="description" content="__PAGE_DESCRIPTION__">
+<link rel="canonical" href="__CANONICAL_URL__">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1902780696242483" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
@@ -914,7 +1047,7 @@ h1 em{color:var(--accent);font-style:normal}
 .tool-tag{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(212,255,87,0.2);border-radius:999px;padding:4px 8px;white-space:nowrap}
 .tool-name{font-family:'Syne',sans-serif;font-size:16px;font-weight:800}
 .tool-copy{font-size:12px;color:var(--muted);line-height:1.55;flex:1}
-.tool-action{align-self:flex-start;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:8px;padding:8px 11px;font-size:12px;font-weight:800;cursor:pointer;transition:all .15s}
+.tool-action{align-self:flex-start;border:1px solid var(--border);background:transparent;color:var(--text);border-radius:8px;padding:8px 11px;font-size:12px;font-weight:800;cursor:pointer;transition:all .15s;text-decoration:none}
 .tool-action:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
 .pro-strip{background:linear-gradient(135deg,rgba(212,255,87,0.13),rgba(255,255,255,0.03));border:1px solid rgba(212,255,87,0.25);border-radius:18px;padding:28px;margin-top:52px}
 .pro-strip-title{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;margin-bottom:8px}
@@ -1097,25 +1230,25 @@ h1 em{color:var(--accent);font-style:normal}
         <div class="tool-top"><span class="tool-icon">🎯</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">图片压缩到指定KB</div>
         <div class="tool-copy">把 JPG、PNG、WebP 压缩到 200KB、500KB、1MB 等目标大小，适合表单、招聘网站和证件材料上传。</div>
-        <button class="tool-action" onclick="jumpTool('compress')">开始压缩</button>
+        <a class="tool-action" href="/image-compressor" onclick="event.preventDefault(); jumpTool('compress')">开始压缩</a>
       </div>
       <div class="tool-card">
         <div class="tool-top"><span class="tool-icon">🔁</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">图片格式转换</div>
         <div class="tool-copy">免费将图片转换为 JPG、PNG 或 WebP，全部在浏览器中完成，不需要上传服务器。</div>
-        <button class="tool-action" onclick="jumpTool('convert')">转换格式</button>
+        <a class="tool-action" href="/image-converter" onclick="event.preventDefault(); jumpTool('convert')">转换格式</a>
       </div>
       <div class="tool-card">
         <div class="tool-top"><span class="tool-icon">📐</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">图片尺寸转换</div>
         <div class="tool-copy">自定义宽高，支持留白适配、裁剪填满和拉伸，快速生成头像、社媒和平台上传尺寸。</div>
-        <button class="tool-action" onclick="jumpTool('resize')">调整尺寸</button>
+        <a class="tool-action" href="/image-resizer" onclick="event.preventDefault(); jumpTool('resize')">调整尺寸</a>
       </div>
       <div class="tool-card pro">
         <div class="tool-top"><span class="tool-icon">📦</span><span class="tool-tag">PRO</span></div>
         <div class="tool-name">批量图片压缩</div>
         <div class="tool-copy">一次处理多张图片，统一压缩设置，适合电商图、资料图和社媒素材批处理。</div>
-        <button class="tool-action" onclick="jumpTool('batch')">解锁批量</button>
+        <a class="tool-action" href="/batch-image-compressor" onclick="event.preventDefault(); jumpTool('batch')">解锁批量</a>
       </div>
       <div class="tool-card pro coming">
         <div class="tool-top"><span class="tool-icon">✂️</span><span class="tool-tag">PRO SOON</span></div>
@@ -1142,19 +1275,19 @@ h1 em{color:var(--accent);font-style:normal}
         <div class="tool-top"><span class="tool-icon">▦</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">二维码生成器</div>
         <div class="tool-copy">生成基础二维码，可自定义前景色和背景色，适合链接、活动页和社媒运营。</div>
-        <button class="tool-action" onclick="openUtility('qr')">生成二维码</button>
+        <a class="tool-action" href="/qr-code-generator" onclick="event.preventDefault(); openUtility('qr')">生成二维码</a>
       </div>
       <div class="tool-card">
         <div class="tool-top"><span class="tool-icon">🖼</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">社交媒体卡片制作</div>
         <div class="tool-copy">输入标题和副标题，本地生成一张适合社媒分享的卡片图，后续 Pro 解锁更多模板。</div>
-        <button class="tool-action" onclick="openUtility('social')">制作卡片</button>
+        <a class="tool-action" href="/social-card-maker" onclick="event.preventDefault(); openUtility('social')">制作卡片</a>
       </div>
       <div class="tool-card">
         <div class="tool-top"><span class="tool-icon">🎨</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">配色与渐变生成器</div>
         <div class="tool-copy">随机生成配色和 CSS 渐变，快速复制到设计稿、落地页或社媒素材里。</div>
-        <button class="tool-action" onclick="openUtility('gradient')">生成配色</button>
+        <a class="tool-action" href="/gradient-generator" onclick="event.preventDefault(); openUtility('gradient')">生成配色</a>
       </div>
     </div>
   </section>
@@ -1169,13 +1302,13 @@ h1 em{color:var(--accent);font-style:normal}
         <div class="tool-top"><span class="tool-icon">{} </span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">CSV / Excel 转 JSON</div>
         <div class="tool-copy">粘贴 CSV 内容，在浏览器本地转换成 JSON。Pro 方向是字段映射、批量文件和保存转换规则。</div>
-        <button class="tool-action" onclick="openUtility('csv')">转换 JSON</button>
+        <a class="tool-action" href="/csv-to-json" onclick="event.preventDefault(); openUtility('csv')">转换 JSON</a>
       </div>
       <div class="tool-card">
         <div class="tool-top"><span class="tool-icon">📄</span><span class="tool-tag">FREE</span></div>
         <div class="tool-name">Markdown 导出 PDF</div>
         <div class="tool-copy">把 Markdown 转成可打印预览，直接使用浏览器打印为 PDF。后续 Pro 支持高级模板。</div>
-        <button class="tool-action" onclick="openUtility('markdown')">打开编辑器</button>
+        <a class="tool-action" href="/markdown-to-pdf" onclick="event.preventDefault(); openUtility('markdown')">打开编辑器</a>
       </div>
       <div class="tool-card pro coming">
         <div class="tool-top"><span class="tool-icon">⚙️</span><span class="tool-tag">PRO SOON</span></div>
@@ -1422,6 +1555,8 @@ Bob,bob@example.com,pro</textarea>
 const FREE_LIMIT = 100;
 const STORAGE_KEY = 'img_compress_count';
 const PAYPAL_PAYMENT_LINK = 'https://www.paypal.com/ncp/payment/LN55VSJYNE252';
+const INITIAL_PAGE_TOOL = __PAGE_TOOL__;
+const INITIAL_PAGE_UTILITY = __PAGE_UTILITY__;
 
 let f = null;
 let usedCount = parseInt(localStorage.getItem(STORAGE_KEY) || '0');
@@ -1451,6 +1586,7 @@ const resizeH = document.getElementById('resizeH');
 
 initAccount();
 updateQuota();
+initRoutePage();
 
 dz.onclick = () => fi.click();
 dz.ondragover = e => { e.preventDefault(); dz.classList.add('over'); };
@@ -1815,12 +1951,14 @@ function downloadBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-function openUtility(tool) {
+function openUtility(tool, shouldScroll = true) {
   document.querySelectorAll('.utility-tab').forEach(tab => tab.classList.remove('on'));
   document.querySelectorAll('.utility-panel').forEach(panel => panel.classList.remove('show'));
   document.getElementById('util-tab-' + tool).classList.add('on');
   document.getElementById('util-' + tool).classList.add('show');
-  document.getElementById('utilityLab').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (shouldScroll) {
+    document.getElementById('utilityLab').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
   if (tool === 'qr') generateQR();
   if (tool === 'gradient') generateGradient();
   if (tool === 'social') renderSocialCard(false);
@@ -2031,6 +2169,15 @@ function renderMarkdown(shouldPrint) {
 function jumpTool(tool) {
   switchTool(tool);
   document.querySelector('.card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function initRoutePage() {
+  if (INITIAL_PAGE_TOOL) {
+    switchTool(INITIAL_PAGE_TOOL);
+  }
+  if (INITIAL_PAGE_UTILITY) {
+    openUtility(INITIAL_PAGE_UTILITY, false);
+  }
 }
 
 function showSoon(name) {

@@ -178,8 +178,20 @@ func TestHandleSitemap(t *testing.T) {
 	if err := xml.Unmarshal(rr.Body.Bytes(), &parsed); err != nil {
 		t.Fatalf("decode sitemap: %v body=%s", err, rr.Body.String())
 	}
-	if len(parsed.URLs) != 1 || parsed.URLs[0].Loc != "https://onlinebox.site/" {
+	if len(parsed.URLs) != len(publicPages) {
+		t.Fatalf("expected %d sitemap urls, got %d: %#v", len(publicPages), len(parsed.URLs), parsed.URLs)
+	}
+	if parsed.URLs[0].Loc != "https://onlinebox.site/" {
 		t.Fatalf("unexpected sitemap urls: %#v", parsed.URLs)
+	}
+	var foundCompressor bool
+	for _, item := range parsed.URLs {
+		if item.Loc == "https://onlinebox.site/image-compressor" {
+			foundCompressor = true
+		}
+	}
+	if !foundCompressor {
+		t.Fatalf("expected image compressor URL in sitemap: %#v", parsed.URLs)
 	}
 }
 
@@ -198,6 +210,17 @@ func TestHandleRobotsIncludesSitemap(t *testing.T) {
 	}
 }
 
+func TestHandleFaviconNoContent(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
+	rr := httptest.NewRecorder()
+
+	handleFavicon(rr, req)
+
+	if rr.Code != http.StatusNoContent {
+		t.Fatalf("expected status 204, got %d body=%s", rr.Code, rr.Body.String())
+	}
+}
+
 func TestHandleIndexNotFoundForUnknownPath(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/missing-page", nil)
 	rr := httptest.NewRecorder()
@@ -206,5 +229,27 @@ func TestHandleIndexNotFoundForUnknownPath(t *testing.T) {
 
 	if rr.Code != http.StatusNotFound {
 		t.Fatalf("expected status 404, got %d body=%s", rr.Code, rr.Body.String())
+	}
+}
+
+func TestHandleIndexRendersRouteSpecificSEO(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/image-converter", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>图片格式转换 | 免费 JPG PNG WebP 在线互转</title>",
+		`<link rel="canonical" href="https://onlinebox.site/image-converter">`,
+		`const INITIAL_PAGE_TOOL = "convert";`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected body to contain %q", expected)
+		}
 	}
 }
