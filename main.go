@@ -249,6 +249,7 @@ func main() {
 	mux.HandleFunc("/robots.txt", handleRobots)
 	mux.HandleFunc("/sitemap.xml", handleSitemap)
 	mux.HandleFunc("/favicon.ico", handleFavicon)
+	mux.HandleFunc("/favicon.svg", handleFavicon)
 	mux.HandleFunc("/google6409d0c57bc30ecb.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte("google-site-verification: google6409d0c57bc30ecb.html"))
@@ -794,6 +795,14 @@ const googleAnalyticsTag = `<!-- Google tag (gtag.js) -->
 
 const adsTXT = "google.com, pub-1902780696242483, DIRECT, f08c47fec0942fa0\n"
 
+const faviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<rect width="64" height="64" rx="14" fill="#101113"/>
+<circle cx="32" cy="32" r="22" fill="#d4ff57"/>
+<circle cx="32" cy="32" r="13" fill="#101113"/>
+<rect x="31" y="12" width="20" height="40" rx="10" fill="#101113"/>
+<circle cx="42" cy="32" r="8" fill="#d4ff57"/>
+</svg>`
+
 const homeHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -802,6 +811,8 @@ const homeHTML = `<!DOCTYPE html>
 <title>__PAGE_TITLE__</title>
 <meta name="description" content="__PAGE_DESCRIPTION__">
 <link rel="canonical" href="__CANONICAL_URL__">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 __GOOGLE_ANALYTICS__
 <style>
@@ -1294,6 +1305,8 @@ const landingHTML = `<!DOCTYPE html>
 <title>__PAGE_TITLE__</title>
 <meta name="description" content="__PAGE_DESCRIPTION__">
 <link rel="canonical" href="__CANONICAL_URL__">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 __GOOGLE_ANALYTICS__
 __QR_SCRIPT__
@@ -1381,6 +1394,8 @@ const privacyHTML = `<!DOCTYPE html>
 <title>__PAGE_TITLE__</title>
 <meta name="description" content="__PAGE_DESCRIPTION__">
 <link rel="canonical" href="__CANONICAL_URL__">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 __GOOGLE_ANALYTICS__
 <style>
@@ -1440,6 +1455,8 @@ const blogIndexHTML = `<!DOCTYPE html>
 <title>__PAGE_TITLE__</title>
 <meta name="description" content="__PAGE_DESCRIPTION__">
 <link rel="canonical" href="__CANONICAL_URL__">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 __GOOGLE_ANALYTICS__
 <style>
@@ -1476,6 +1493,8 @@ const blogPostHTML = `<!DOCTYPE html>
 <title>__PAGE_TITLE__</title>
 <meta name="description" content="__PAGE_DESCRIPTION__">
 <link rel="canonical" href="__CANONICAL_URL__">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 __GOOGLE_ANALYTICS__
 <style>
@@ -1540,7 +1559,9 @@ func handleFavicon(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "image/svg+xml; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Write([]byte(faviconSVG))
 }
 
 type sitemapURLSet struct {
@@ -2230,6 +2251,8 @@ const indexHTML = `<!DOCTYPE html>
 <title>__PAGE_TITLE__</title>
 <meta name="description" content="__PAGE_DESCRIPTION__">
 <link rel="canonical" href="__CANONICAL_URL__">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1902780696242483" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>

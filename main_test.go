@@ -297,14 +297,23 @@ func TestHandleAdsTXT(t *testing.T) {
 	}
 }
 
-func TestHandleFaviconNoContent(t *testing.T) {
+func TestHandleFaviconRendersSiteIcon(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/favicon.ico", nil)
 	rr := httptest.NewRecorder()
 
 	handleFavicon(rr, req)
 
-	if rr.Code != http.StatusNoContent {
-		t.Fatalf("expected status 204, got %d body=%s", rr.Code, rr.Body.String())
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	if got := rr.Header().Get("Content-Type"); !strings.Contains(got, "image/svg+xml") {
+		t.Fatalf("expected svg content type, got %q", got)
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{`<svg xmlns="http://www.w3.org/2000/svg"`, "#d4ff57", "#101113"} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected favicon body to contain %q", expected)
+		}
 	}
 }
 
@@ -535,6 +544,7 @@ func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 	for _, expected := range []string{
 		`<html lang="en">`,
 		"<title>OnlineBox | Free Browser Tools for Images, Data and Creators</title>",
+		`<link rel="icon" href="/favicon.svg" type="image/svg+xml">`,
 		`https://www.googletagmanager.com/gtag/js?id=G-GRDT3349BV`,
 		"Free browser tools",
 		"Image tools",
