@@ -493,6 +493,31 @@ func TestHandleIndexRendersFreeBatchCompressor(t *testing.T) {
 	}
 }
 
+func TestHandleIndexRendersCustomImageUploadDropzone(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/image-compressor", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		`id="imageDrop"`,
+		`class="file-input-hidden"`,
+		`Drop an image here or click to browse`,
+		`JPG, PNG, WebP, HEIC and HEIF`,
+		`function setupImageDrop()`,
+		`function handleImageDropKey(event)`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected image compressor page to contain %q", expected)
+		}
+	}
+}
+
 func TestHandleIndexRendersM3U8Player(t *testing.T) {
 	t.Setenv("SITE_URL", "https://onlinebox.site/")
 	req := httptest.NewRequest(http.MethodGet, "/m3u8-player", nil)

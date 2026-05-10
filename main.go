@@ -1267,6 +1267,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 <label for="batchInput">Choose images</label>
 <div id="batchDrop" class="file-drop" role="button" tabindex="0" onclick="document.getElementById('batchInput').click()" onkeydown="handleBatchDropKey(event)">
 <input id="batchInput" class="file-input-hidden" type="file" accept="image/jpeg,image/png,image/webp" multiple onchange="loadBatchFiles(this.files)">
+<div class="file-drop-icon">+</div>
 <strong>Choose multiple images</strong>
 <span>Drag a group of JPG, PNG or WebP images here, or click and use Shift, Cmd or Ctrl to select more than one file.</span>
 </div>
@@ -1287,7 +1288,12 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 func imageToolHTML(label, controls, actionLabel, action string) string {
 	return `<section class="tool-panel">
 <label for="imageInput">Choose image</label>
-<input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" onchange="loadImageFile(this.files[0])">
+<div id="imageDrop" class="file-drop image-drop" role="button" tabindex="0" onclick="document.getElementById('imageInput').click()" onkeydown="handleImageDropKey(event)">
+<input id="imageInput" class="file-input-hidden" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" onchange="loadImageFile(this.files[0])">
+<div class="file-drop-icon">+</div>
+<strong>Drop an image here or click to browse</strong>
+<span>JPG, PNG, WebP, HEIC and HEIF · processed locally in your browser</span>
+</div>
 <div id="imageInfo" class="hint">Supports HEIC, HEIF, JPG, PNG and WebP. The image is processed locally in your browser.</div>
 <label>` + label + `</label>
 ` + controls + `
@@ -1533,12 +1539,15 @@ function canLoadImageFile(file){return !!file&&(file.type.startsWith('image/')||
 function drawLoadedImage(file,img,previewURL,note){selectedImage=img;const canvas=document.getElementById('imageCanvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);document.getElementById('imageInfo').textContent=file.name+' · '+(file.size/1024).toFixed(1)+' KB'+(note? ' · '+note:'');if(previewURL)URL.revokeObjectURL(previewURL);}
 async function loadImageFile(file){if(!canLoadImageFile(file)){setStatus('Please choose a HEIC, HEIF, JPG, PNG or WebP image');return false;}selectedFile=file;selectedImage=null;setStatus('Loading image locally...');try{let sourceBlob=file,note='';if(isHEICFile(file)){if(!window.heic2any){setStatus('HEIC support is still loading. Try again in a moment.');return false;}setStatus('Converting HEIC preview locally...');sourceBlob=await heic2any({blob:file,toType:'image/jpeg',quality:.92});if(Array.isArray(sourceBlob))sourceBlob=sourceBlob[0];note='HEIC decoded locally';}const img=new Image();const previewURL=URL.createObjectURL(sourceBlob);return await new Promise(resolve=>{img.onload=()=>{drawLoadedImage(file,img,previewURL,note);setStatus(isHEICFile(file)?'HEIC loaded. Choose JPG and click Convert image.':'Image loaded locally.');resolve(true);};img.onerror=()=>{URL.revokeObjectURL(previewURL);setStatus('This image could not be loaded in the browser.');resolve(false);};img.src=previewURL;});}catch(error){setStatus('Could not decode this image. Try another file or export it from Photos first.');return false;}}
 function setTarget(kb){const input=document.getElementById('targetKB');if(input)input.value=kb;}
+function handleImageDropKey(event){if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('imageInput').click();}}
+function setupImageDrop(){const drop=document.getElementById('imageDrop');if(!drop)return;['dragenter','dragover'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.add('over');}));['dragleave','drop'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.remove('over');}));drop.addEventListener('drop',event=>loadImageFile(event.dataTransfer.files&&event.dataTransfer.files[0]));}
 function setFormat(type,label,el){outputType=type;outputLabel=label;document.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
 function setResizeMode(mode,el){resizeMode=mode;document.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
 function imageToBlob(canvas,type,quality){return new Promise(resolve=>canvas.toBlob(resolve,type,quality));}
 async function compressImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const targetBytes=(parseFloat(document.getElementById('targetKB').value)||200)*1024;const canvas=document.getElementById('imageCanvas');let low=.02,high=.95,best=null;for(let i=0;i<10;i++){const q=(low+high)/2;const blob=await imageToBlob(canvas,'image/jpeg',q);if(blob.size<=targetBytes){best=blob;low=q;}else{high=q;}}if(!best)best=await imageToBlob(canvas,'image/jpeg',.02);downloadBlob(best,'compressed_'+selectedFile.name.replace(/\.[^.]+$/,'')+'.jpg');setStatus('Compressed to '+(best.size/1024).toFixed(1)+' KB');}
 async function convertImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const canvas=document.getElementById('imageCanvas');const ctx=canvas.getContext('2d');if(outputType==='image/jpeg'){ctx.globalCompositeOperation='destination-over';ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalCompositeOperation='source-over';}const blob=await imageToBlob(canvas,outputType,.92);const ext=outputType==='image/png'?'.png':outputType==='image/webp'?'.webp':'.jpg';downloadBlob(blob,'converted_'+selectedFile.name.replace(/\.[^.]+$/,'')+ext);setStatus('Converted to '+outputLabel+' · '+(blob.size/1024).toFixed(1)+' KB');}
-async function resizeImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const width=parseInt(document.getElementById('resizeW').value,10),height=parseInt(document.getElementById('resizeH').value,10);if(!width||!height){setStatus('Enter a valid width and height');return;}const canvas=document.getElementById('imageCanvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);let sx=0,sy=0,sw=selectedImage.naturalWidth,sh=selectedImage.naturalHeight,dx=0,dy=0,dw=width,dh=height;if(resizeMode==='contain'){const scale=Math.min(width/sw,height/sh);dw=sw*scale;dh=sh*scale;dx=(width-dw)/2;dy=(height-dh)/2;}else if(resizeMode==='cover'){const target=width/height,ratio=sw/sh;if(ratio>target){sw=sh*target;sx=(selectedImage.naturalWidth-sw)/2;}else{sh=sw/target;sy=(selectedImage.naturalHeight-sh)/2;}}ctx.drawImage(selectedImage,sx,sy,sw,sh,dx,dy,dw,dh);const blob=await imageToBlob(canvas,'image/jpeg',.92);downloadBlob(blob,'resized_'+selectedFile.name.replace(/\.[^.]+$/,'')+'_'+width+'x'+height+'.jpg');setStatus('Resized to '+width+'x'+height+' · '+(blob.size/1024).toFixed(1)+' KB');}`
+async function resizeImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const width=parseInt(document.getElementById('resizeW').value,10),height=parseInt(document.getElementById('resizeH').value,10);if(!width||!height){setStatus('Enter a valid width and height');return;}const canvas=document.getElementById('imageCanvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);let sx=0,sy=0,sw=selectedImage.naturalWidth,sh=selectedImage.naturalHeight,dx=0,dy=0,dw=width,dh=height;if(resizeMode==='contain'){const scale=Math.min(width/sw,height/sh);dw=sw*scale;dh=sh*scale;dx=(width-dw)/2;dy=(height-dh)/2;}else if(resizeMode==='cover'){const target=width/height,ratio=sw/sh;if(ratio>target){sw=sh*target;sx=(selectedImage.naturalWidth-sw)/2;}else{sh=sw/target;sy=(selectedImage.naturalHeight-sh)/2;}}ctx.drawImage(selectedImage,sx,sy,sw,sh,dx,dy,dw,dh);const blob=await imageToBlob(canvas,'image/jpeg',.92);downloadBlob(blob,'resized_'+selectedFile.name.replace(/\.[^.]+$/,'')+'_'+width+'x'+height+'.jpg');setStatus('Resized to '+width+'x'+height+' · '+(blob.size/1024).toFixed(1)+' KB');}
+setupImageDrop();`
 }
 
 func exifLandingScript() string {
@@ -1645,10 +1654,11 @@ textarea{min-height:170px;resize:vertical;line-height:1.55}
 textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .grid{display:grid;gap:12px}.two{grid-template-columns:1fr 1fr}.unit{grid-template-columns:1fr auto;align-items:center}
 .file-input-hidden{display:none}
-.file-drop{border:1.5px dashed var(--border);background:var(--surface2);border-radius:14px;padding:24px;margin:10px 0 12px;cursor:pointer;display:grid;gap:8px;transition:border-color .16s,background .16s}
-.file-drop:hover,.file-drop:focus-visible,.file-drop.over{border-color:var(--accent);background:var(--accent-dim);outline:0}
-.file-drop strong{font-family:'Syne',sans-serif;color:var(--text);font-size:20px;line-height:1.2}
-.file-drop span{color:var(--muted);line-height:1.6}
+.file-drop{border:1.5px dashed rgba(255,255,255,.16);background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border-radius:14px;padding:22px;margin:10px 0 12px;cursor:pointer;display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:center;transition:border-color .16s,background .16s,transform .16s}
+.file-drop:hover,.file-drop:focus-visible,.file-drop.over{border-color:var(--accent);background:var(--accent-dim);outline:0;transform:translateY(-1px)}
+.file-drop-icon{grid-row:1/3;width:44px;height:44px;border-radius:12px;background:var(--accent);color:#0e0e11;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1}
+.file-drop strong{font-family:'Syne',sans-serif;color:var(--text);font-size:19px;line-height:1.2}
+.file-drop span{color:var(--muted);line-height:1.55;font-size:13px}
 .file-list{display:grid;gap:8px;margin-top:10px}
 .file-pill{display:flex;justify-content:space-between;gap:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;line-height:1.4}
 .file-pill span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-pill span:last-child{color:var(--muted);white-space:nowrap}
