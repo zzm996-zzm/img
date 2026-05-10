@@ -340,12 +340,17 @@ func TestHandleIndexRendersRouteSpecificSEO(t *testing.T) {
 	}
 	body := rr.Body.String()
 	for _, expected := range []string{
-		"<title>Image Converter | Convert JPG PNG WebP Online</title>",
-		"<h1>Image converter<em>convert JPG, PNG and WebP online</em></h1>",
+		"<title>HEIC to JPG Converter | Convert HEIC JPG PNG WebP Online</title>",
+		"<h1>Image converter<em>convert HEIC to JPG online</em></h1>",
 		`<link rel="canonical" href="https://onlinebox.site/image-converter">`,
+		`heic2any.min.js`,
+		`accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"`,
+		"Supports HEIC, HEIF, JPG, PNG and WebP.",
+		`function isHEICFile(file)`,
 		`function convertImage()`,
-		"How to use the image converter",
-		"When is the image converter useful?",
+		"How to use the HEIC to JPG image converter",
+		"When is the HEIC to JPG image converter useful?",
+		"iPhone HEIC photos into JPG",
 		"FAQ",
 		`href="/image-compressor"`,
 	} {

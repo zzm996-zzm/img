@@ -93,11 +93,11 @@ var publicPages = []publicPage{
 	},
 	{
 		Path:        "/image-converter",
-		Title:       "Image Converter | Convert JPG PNG WebP Online",
-		Description: "Convert images between JPG, PNG and WebP online. The conversion runs in your browser and is useful for web, ecommerce and social media assets.",
+		Title:       "HEIC to JPG Converter | Convert HEIC JPG PNG WebP Online",
+		Description: "Convert HEIC, HEIF, JPG, PNG and WebP images online. HEIC to JPG conversion runs locally in your browser with no file uploads.",
 		Heading:     "Image converter",
-		Accent:      "convert JPG, PNG and WebP online",
-		Intro:       "Choose an image and convert it to JPG, PNG or WebP. A simple browser-based converter for publishing, uploads and quick format fixes.",
+		Accent:      "convert HEIC to JPG online",
+		Intro:       "Choose an iPhone HEIC photo or a JPG, PNG or WebP image and convert it in your browser. Useful for uploads, publishing and quick format fixes.",
 		Kind:        "image",
 		PageTool:    "convert",
 	},
@@ -773,6 +773,9 @@ func qrScriptTag(page publicPage) string {
 	if page.PageUtility == "m3u8" {
 		return `<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>`
 	}
+	if page.PageTool == "compress" || page.PageTool == "convert" || page.PageTool == "resize" {
+		return `<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>`
+	}
 	return ""
 }
 
@@ -1040,8 +1043,8 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 func imageToolHTML(label, controls, actionLabel, action string) string {
 	return `<section class="tool-panel">
 <label for="imageInput">Choose image</label>
-<input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp" onchange="loadImageFile(this.files[0])">
-<div id="imageInfo" class="hint">Supports JPG, PNG and WebP. The image is processed locally in your browser.</div>
+<input id="imageInput" type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" onchange="loadImageFile(this.files[0])">
+<div id="imageInfo" class="hint">Supports HEIC, HEIF, JPG, PNG and WebP. The image is processed locally in your browser.</div>
 <label>` + label + `</label>
 ` + controls + `
 <button class="btn" onclick="` + action + `">` + actionLabel + `</button>
@@ -1112,7 +1115,7 @@ func landingGuideHTML(page publicPage) string {
 	case "/image-compressor":
 		return imageGuideHTML("image compressor", "Upload an image, enter a target size such as 200KB, 500KB or 1MB, then click Compress image. The tool tries to produce a smaller JPG while staying close to your target.", "It is useful for application forms, profile photos, ecommerce uploads, job portals and social media images.")
 	case "/image-converter":
-		return imageGuideHTML("image converter", "Choose JPG, PNG or WebP as the output format, upload an image and click Convert image. The converted file downloads automatically.", "It is useful when you need to turn a PNG into JPG, create WebP assets for the web or fix an incompatible image format.")
+		return imageGuideHTML("HEIC to JPG image converter", "Choose JPG, PNG or WebP as the output format, upload a HEIC, HEIF, JPG, PNG or WebP image and click Convert image. The converted file downloads automatically.", "It is useful when you need to turn iPhone HEIC photos into JPG, convert PNG to JPG, create WebP assets for the web or fix an incompatible image format.")
 	case "/image-resizer":
 		return imageGuideHTML("image resizer", "Enter the target width and height, choose contain, cover or stretch mode, then upload an image and resize it.", "It is useful for avatars, product photos, social covers, form uploads and fixed-ratio design assets.")
 	case "/batch-image-compressor":
@@ -1271,7 +1274,10 @@ func imageLandingScript() string {
 	return `let selectedFile=null,selectedImage=null,outputType='image/jpeg',outputLabel='JPG',resizeMode='contain';
 function setStatus(msg){const el=document.getElementById('status');if(el)el.textContent=msg;}
 function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
-function loadImageFile(file){if(!file||!file.type.startsWith('image/')){setStatus('Please choose an image file');return;}selectedFile=file;const img=new Image();img.onload=()=>{selectedImage=img;const canvas=document.getElementById('imageCanvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);document.getElementById('imageInfo').textContent=file.name+' · '+(file.size/1024).toFixed(1)+' KB';};img.src=URL.createObjectURL(file);}
+function isHEICFile(file){const name=(file&&file.name||'').toLowerCase();const type=(file&&file.type||'').toLowerCase();return type==='image/heic'||type==='image/heif'||name.endsWith('.heic')||name.endsWith('.heif');}
+function canLoadImageFile(file){return !!file&&(file.type.startsWith('image/')||isHEICFile(file));}
+function drawLoadedImage(file,img,previewURL,note){selectedImage=img;const canvas=document.getElementById('imageCanvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);document.getElementById('imageInfo').textContent=file.name+' · '+(file.size/1024).toFixed(1)+' KB'+(note? ' · '+note:'');if(previewURL)URL.revokeObjectURL(previewURL);}
+async function loadImageFile(file){if(!canLoadImageFile(file)){setStatus('Please choose a HEIC, HEIF, JPG, PNG or WebP image');return;}selectedFile=file;selectedImage=null;setStatus('Loading image locally...');try{let sourceBlob=file,note='';if(isHEICFile(file)){if(!window.heic2any){setStatus('HEIC support is still loading. Try again in a moment.');return;}setStatus('Converting HEIC preview locally...');sourceBlob=await heic2any({blob:file,toType:'image/jpeg',quality:.92});if(Array.isArray(sourceBlob))sourceBlob=sourceBlob[0];note='HEIC decoded locally';}const img=new Image();const previewURL=URL.createObjectURL(sourceBlob);img.onload=()=>{drawLoadedImage(file,img,previewURL,note);setStatus(isHEICFile(file)?'HEIC loaded. Choose JPG and click Convert image.':'Image loaded locally.');};img.onerror=()=>{URL.revokeObjectURL(previewURL);setStatus('This image could not be loaded in the browser.');};img.src=previewURL;}catch(error){setStatus('Could not decode this image. Try another file or export it from Photos first.');}}
 function setTarget(kb){const input=document.getElementById('targetKB');if(input)input.value=kb;}
 function setFormat(type,label,el){outputType=type;outputLabel=label;document.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
 function setResizeMode(mode,el){resizeMode=mode;document.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
