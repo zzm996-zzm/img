@@ -165,6 +165,17 @@ var publicPages = []publicPage{
 		PageUtility: "csv",
 	},
 	{
+		Path:        "/json-formatter",
+		Title:       "JSON Formatter & Validator | Free Online JSON Beautifier - OnlineBox",
+		Description: "Format, validate and minify JSON instantly in your browser. Free online JSON beautifier with error detection — no uploads, no server.",
+		Heading:     "JSON Formatter & Validator",
+		Accent:      "Free Online JSON Beautifier",
+		Intro:       "Paste your JSON to format, validate and minify instantly. Runs in your browser — nothing is sent to a server.",
+		Kind:        "utility",
+		PageTool:    "compress",
+		PageUtility: "json",
+	},
+	{
 		Path:        "/markdown-to-pdf",
 		Title:       "Markdown to PDF | Free Markdown Preview and PDF Export",
 		Description: "Convert Markdown to a printable preview and export it as PDF from your browser. Useful for notes, drafts and lightweight documentation.",
@@ -306,7 +317,7 @@ func toolLabel(page publicPage) string {
 	if page.Kind == "image" {
 		return "Image"
 	}
-	if page.PageUtility == "csv" || page.PageUtility == "markdown" {
+	if page.PageUtility == "csv" || page.PageUtility == "json" || page.PageUtility == "markdown" {
 		return "Data"
 	}
 	if page.PageUtility == "m3u8" {
@@ -428,7 +439,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(42px,7vw,78px);line-height:.98;
 <aside class="hero-panel">
 <strong>Start with a focused tool</strong>
 <p>The homepage is only a directory. Each tool has its own page, keyword, instructions and FAQ.</p>
-<div class="quick"><a href="/csv-to-json">CSV to JSON</a><a href="/image-compressor">Compress image</a><a href="/qr-code-generator">QR code</a></div>
+<div class="quick"><a href="/json-formatter">JSON formatter</a><a href="/csv-to-json">CSV to JSON</a><a href="/image-compressor">Compress image</a></div>
 </aside>
 </section>
 <section class="section" id="image-tools">
@@ -470,6 +481,26 @@ Alice,alice@example.com,free
 Bob,bob@example.com,pro</textarea>
 <button class="btn" onclick="convertCSV()">Convert to JSON</button>
 <pre id="jsonOutput" class="output"></pre>
+</section>`
+	case "json":
+		return `<section class="tool-panel json-tool">
+<div class="json-toolbar" aria-label="JSON actions">
+<button class="btn compact" onclick="formatJSON()">Format</button>
+<button class="ghost compact" onclick="minifyJSON()">Minify</button>
+<button class="ghost compact" onclick="copyJSONOutput()">Copy result</button>
+<button class="ghost compact" onclick="clearJSONTool()">Clear</button>
+</div>
+<div id="jsonStatus" class="json-status valid" aria-live="polite">Valid JSON</div>
+<div class="json-columns">
+<div>
+<label for="jsonInput">Raw JSON</label>
+<textarea id="jsonInput" class="json-area" spellcheck="false">{"name":"OnlineBox","tools":["formatter","validator","minifier"],"local":true}</textarea>
+</div>
+<div>
+<label for="jsonFormattedOutput">Formatted result</label>
+<textarea id="jsonFormattedOutput" class="json-area output-area" readonly spellcheck="false"></textarea>
+</div>
+</div>
 </section>`
 	case "markdown":
 		return `<section class="tool-panel">
@@ -641,6 +672,27 @@ func landingGuideHTML(page publicPage) string {
 <details><summary>Can I convert an Excel file?</summary><p>This page accepts pasted CSV text. If you have an Excel file, export or save it as CSV first, then paste the CSV content here.</p></details>
 </section>
 </section>`
+	case "/json-formatter":
+		return `<section class="guide">
+<h2>How to use the JSON Formatter & Validator</h2>
+<ol>
+<li>Paste raw JSON into the left input box. Validation runs as you type.</li>
+<li>Click Format to beautify the JSON with indentation, or Minify to compress it into a single line.</li>
+<li>Use Copy result when the output is ready, or Clear to reset both panels.</li>
+</ol>
+<h2>Best use cases for JSON formatting</h2>
+<p>This tool is useful for reading API responses, checking configuration files, cleaning webhook payloads, preparing mock data, debugging front-end state and sharing compact JSON snippets. Everything runs in your browser, so pasted JSON is not uploaded for formatting.</p>
+<h2>What the validator checks</h2>
+<p>The validator uses the browser JSON parser and reports syntax problems such as trailing commas, missing quotes, unclosed objects, invalid escape sequences and unexpected tokens. When the browser exposes a character position, the error message includes the line and column.</p>
+<section class="faq-block">
+<h2>JSON Formatter FAQ</h2>
+<details open><summary>Is this JSON formatter free?</summary><p>Yes. You can format, validate, minify, copy and clear JSON directly in the browser.</p></details>
+<details><summary>Does my JSON upload to a server?</summary><p>No. The formatting and validation logic runs locally in your browser, and the server only delivers the page.</p></details>
+<details><summary>Why does valid JavaScript object syntax fail?</summary><p>JSON is stricter than JavaScript object literals. Keys and string values must use double quotes, and comments or trailing commas are not allowed.</p></details>
+<details><summary>Can it show where a JSON error happened?</summary><p>Yes when the browser provides the character offset or line and column. The tool converts that into an easy-to-read position next to the parser message.</p></details>
+<details><summary>What is the difference between format and minify?</summary><p>Format adds indentation and line breaks for readability. Minify removes unnecessary whitespace to make JSON smaller for storage, URLs or API payloads.</p></details>
+</section>
+</section>`
 	case "/image-compressor":
 		return imageGuideHTML("image compressor", "Upload an image, enter a target size such as 200KB, 500KB or 1MB, then click Compress image. The tool tries to produce a smaller JPG while staying close to your target.", "It is useful for application forms, profile photos, ecommerce uploads, job portals and social media images.")
 	case "/image-converter":
@@ -727,6 +779,17 @@ func utilityLandingScript(tool string) string {
 		return `function parseCSV(text){const rows=[];let row=[],cell='',quote=false;for(let i=0;i<text.length;i++){const ch=text[i],next=text[i+1];if(ch==='"'&&quote&&next==='"'){cell+='"';i++;}else if(ch==='"'){quote=!quote;}else if(ch===','&&!quote){row.push(cell.trim());cell='';}else if((ch==='\n'||ch==='\r')&&!quote){if(ch==='\r'&&next==='\n')i++;row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);row=[];cell='';}else{cell+=ch;}}row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);return rows;}
 function convertCSV(){const rows=parseCSV(document.getElementById('csvInput').value);const out=document.getElementById('jsonOutput');if(rows.length<2){out.textContent='Paste CSV content with a header row.';return;}const headers=rows[0];const data=rows.slice(1).map(row=>{const item={};headers.forEach((header,index)=>{item[header||('field_'+index)]=row[index]||'';});return item;});out.textContent=JSON.stringify(data,null,2);}
 convertCSV();`
+	case "json":
+		return `function jsonPositionFromMessage(message,text){let match=message.match(/position\s+(\d+)/i);if(match){const pos=parseInt(match[1],10);let line=1,column=1;for(let i=0;i<Math.min(pos,text.length);i++){if(text[i]==='\n'){line++;column=1;}else{column++;}}return {pos,line,column};}match=message.match(/line\s+(\d+)\s+column\s+(\d+)/i);if(match){return {line:parseInt(match[1],10),column:parseInt(match[2],10)};}return null;}
+function setJSONStatus(message,valid){const status=document.getElementById('jsonStatus');status.textContent=message;status.classList.toggle('valid',valid);status.classList.toggle('invalid',!valid);}
+function parseJSONInput(){const input=document.getElementById('jsonInput').value;if(!input.trim()){setJSONStatus('Paste JSON to validate and format.',true);return {ok:false,empty:true};}try{return {ok:true,value:JSON.parse(input),text:input};}catch(error){const position=jsonPositionFromMessage(error.message,input);let detail=error.message;if(position&&!/line\s+\d+\s+column\s+\d+/i.test(detail)){detail+=' at line '+position.line+', column '+position.column;if(Number.isFinite(position.pos))detail+=' (position '+position.pos+')';}setJSONStatus('Invalid JSON: '+detail,false);return {ok:false,error};}}
+function validateJSONLive(){const parsed=parseJSONInput();if(parsed.ok){setJSONStatus('Valid JSON',true);}return parsed;}
+function formatJSON(){const parsed=parseJSONInput();if(!parsed.ok)return;document.getElementById('jsonFormattedOutput').value=JSON.stringify(parsed.value,null,2);setJSONStatus('Valid JSON · formatted',true);}
+function minifyJSON(){const parsed=parseJSONInput();if(!parsed.ok)return;document.getElementById('jsonFormattedOutput').value=JSON.stringify(parsed.value);setJSONStatus('Valid JSON · minified',true);}
+async function copyJSONOutput(){const output=document.getElementById('jsonFormattedOutput');if(!output.value){setJSONStatus('Nothing to copy yet. Format or minify first.',false);return;}try{await navigator.clipboard.writeText(output.value);setJSONStatus('Copied formatted result to clipboard.',true);}catch(error){output.focus();output.select();document.execCommand('copy');setJSONStatus('Copied formatted result to clipboard.',true);}}
+function clearJSONTool(){document.getElementById('jsonInput').value='';document.getElementById('jsonFormattedOutput').value='';setJSONStatus('Paste JSON to validate and format.',true);}
+document.getElementById('jsonInput').addEventListener('input',()=>{const parsed=validateJSONLive();if(parsed.ok)document.getElementById('jsonFormattedOutput').value=JSON.stringify(parsed.value,null,2);});
+formatJSON();`
 	case "markdown":
 		return `function escapeHTML(value){return value.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
 function inlineMarkdown(text){return escapeHTML(text).replace(/\x60([^\x60]+)\x60/g,'<code>$1</code>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>');}
@@ -858,9 +921,15 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .file-pill{display:flex;justify-content:space-between;gap:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:13px;line-height:1.4}
 .file-pill span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.file-pill span:last-child{color:var(--muted);white-space:nowrap}
 .btn{display:inline-flex;justify-content:center;width:100%;background:var(--accent);color:#0e0e11;border:0;border-radius:12px;padding:15px 18px;margin-top:14px;font-family:'Syne',sans-serif;font-weight:800;cursor:pointer;text-decoration:none}
+.btn.compact,.ghost.compact{width:auto;margin-top:0;min-height:42px;align-items:center}
 .ghost,.chip{border:1px solid var(--border);background:transparent;color:var(--text);border-radius:10px;padding:10px 12px;font-weight:800;cursor:pointer;margin-top:10px}
 .choices{display:flex;gap:8px;flex-wrap:wrap}.chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
 .output{background:var(--surface2);border:1px solid var(--border);border-radius:12px;min-height:170px;padding:16px;margin-top:16px;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.55}
+.json-tool{width:min(1120px,calc(100vw - 44px));margin-left:50%;transform:translateX(-50%)}
+.json-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.json-status{border:1px solid var(--border);background:var(--surface2);border-radius:10px;padding:11px 12px;color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:14px}
+.json-status.valid{border-color:rgba(212,255,87,.26);color:var(--accent);background:var(--accent-dim)}.json-status.invalid{border-color:rgba(255,105,105,.42);color:#ff9a9a;background:rgba(255,105,105,.08)}
+.json-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}.json-area{min-height:430px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.58;tab-size:2}.output-area{background:#141418;color:#f4f4f4}
 .preview{font-family:'DM Sans',sans-serif}.preview h1,.preview h2,.preview h3{font-family:'Syne',sans-serif;margin:0 0 10px}.preview h3{font-size:19px;color:var(--accent)}.preview p,.preview li{line-height:1.65;margin-bottom:8px}.preview ul,.preview ol{padding-left:22px;margin:10px 0 14px}.preview blockquote{border-left:3px solid var(--accent);background:rgba(212,255,87,.08);margin:14px 0;padding:10px 14px;color:var(--text)}.preview pre{background:#101114;border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;margin:14px 0}.preview code{background:rgba(255,255,255,.08);border-radius:5px;padding:2px 5px}.preview pre code{background:transparent;padding:0}.preview hr{border:0;border-top:1px solid var(--border);margin:20px 0}.table-wrap{overflow:auto;margin:14px 0}.preview table{width:100%;border-collapse:collapse;min-width:520px}.preview th,.preview td{border:1px solid var(--border);padding:9px 10px;text-align:left}.preview th{color:var(--text);background:rgba(255,255,255,.05)}
 .preview.markdown-body{background:#fff;color:#1f2328;color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;white-space:normal;--color-canvas-default:#fff;--color-canvas-subtle:#f6f8fa;--color-fg-default:#1f2328;--color-fg-muted:#59636e;--color-border-default:#d0d7de;--color-border-muted:#d8dee4}.preview.markdown-body h1,.preview.markdown-body h2,.preview.markdown-body h3{font-family:inherit;color:#1f2328}.preview.markdown-body h3{font-size:1.25em}.preview.markdown-body blockquote{background:transparent;color:#59636e;border-left-color:#d0d7de}.preview.markdown-body pre{background:#f6f8fa;border:0;color:#1f2328}.preview.markdown-body code{background:rgba(175,184,193,.2);color:#1f2328}.preview.markdown-body pre code{background:transparent;color:#1f2328}.preview.markdown-body table{display:table;width:100%;background:#fff;color:#1f2328}.preview.markdown-body th{background:#f6f8fa;color:#1f2328}.preview.markdown-body td{background:#fff;color:#1f2328}
 .canvas-wrap{display:flex;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;overflow:auto}
@@ -878,6 +947,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .guide{color:var(--muted);line-height:1.75;margin:30px 0}.guide h2{font-family:'Syne',sans-serif;color:var(--text);font-size:22px;margin:26px 0 10px}.guide p{margin-bottom:12px}.guide ol{padding-left:22px;margin:10px 0 18px}.guide li{margin-bottom:8px}.faq-block{margin-top:24px}.faq-block details{border-top:1px solid var(--border);padding:14px 0}.faq-block summary{color:var(--text);font-weight:800;cursor:pointer}.faq-block p{margin:10px 0 0}
 .related{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:30px}.related a{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);text-decoration:none;padding:12px;font-weight:800}
 .site-footer{border-top:1px solid var(--border);margin-top:34px;padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.site-footer a{color:var(--text);text-decoration:none;font-weight:800}
+@media(max-width:760px){.json-columns{grid-template-columns:1fr}.json-area{min-height:300px}.json-toolbar .compact{flex:1 1 calc(50% - 8px)}}
 @media(max-width:620px){.two,.related{grid-template-columns:1fr}.wrap{padding-top:30px}.m3u8-input-row{grid-template-columns:1fr}.m3u8-play-btn{width:100%}.m3u8-controls{grid-template-columns:auto 1fr auto;gap:7px}.m3u8-progress{grid-column:1/-1;grid-row:1}#m3u8Current{display:none}.m3u8-volume{width:76px}.speed-group{grid-column:1/-1;justify-content:flex-start}.m3u8-time{min-width:36px}}
 </style>
 </head>

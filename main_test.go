@@ -187,6 +187,7 @@ func TestHandleSitemap(t *testing.T) {
 	var foundCompressor bool
 	var foundPrivacy bool
 	var foundM3U8 bool
+	var foundJSON bool
 	for _, item := range parsed.URLs {
 		if item.Loc == "https://onlinebox.site/image-compressor" {
 			foundCompressor = true
@@ -197,6 +198,9 @@ func TestHandleSitemap(t *testing.T) {
 		if item.Loc == "https://onlinebox.site/m3u8-player" {
 			foundM3U8 = true
 		}
+		if item.Loc == "https://onlinebox.site/json-formatter" {
+			foundJSON = true
+		}
 	}
 	if !foundCompressor {
 		t.Fatalf("expected image compressor URL in sitemap: %#v", parsed.URLs)
@@ -206,6 +210,9 @@ func TestHandleSitemap(t *testing.T) {
 	}
 	if !foundM3U8 {
 		t.Fatalf("expected M3U8 player URL in sitemap: %#v", parsed.URLs)
+	}
+	if !foundJSON {
+		t.Fatalf("expected JSON formatter URL in sitemap: %#v", parsed.URLs)
 	}
 }
 
@@ -340,6 +347,51 @@ func TestHandleIndexRendersUtilityLandingPage(t *testing.T) {
 	}
 }
 
+func TestHandleIndexRendersJSONFormatter(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/json-formatter", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>JSON Formatter &amp; Validator | Free Online JSON Beautifier - OnlineBox</title>",
+		`<meta name="description" content="Format, validate and minify JSON instantly in your browser. Free online JSON beautifier with error detection — no uploads, no server.">`,
+		`<link rel="canonical" href="https://onlinebox.site/json-formatter">`,
+		"<h1>JSON Formatter &amp; Validator<em>Free Online JSON Beautifier</em></h1>",
+		"Paste your JSON to format, validate and minify instantly. Runs in your browser — nothing is sent to a server.",
+		`id="jsonInput"`,
+		`id="jsonFormattedOutput"`,
+		`onclick="formatJSON()"`,
+		`onclick="minifyJSON()"`,
+		`onclick="copyJSONOutput()"`,
+		`onclick="clearJSONTool()"`,
+		`function jsonPositionFromMessage`,
+		`function validateJSONLive`,
+		"How to use the JSON Formatter & Validator",
+		"Best use cases for JSON formatting",
+		"JSON Formatter FAQ",
+		"Does my JSON upload to a server?",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected body to contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{
+		`id="csvInput"`,
+		`id="markdownInput"`,
+		`id="m3u8Url"`,
+	} {
+		if strings.Contains(body, unexpected) {
+			t.Fatalf("expected JSON formatter page to omit %q", unexpected)
+		}
+	}
+}
+
 func TestHandleIndexRendersFreeBatchCompressor(t *testing.T) {
 	t.Setenv("SITE_URL", "https://onlinebox.site/")
 	req := httptest.NewRequest(http.MethodGet, "/batch-image-compressor", nil)
@@ -439,6 +491,7 @@ func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 		"Image tools",
 		"Data and creator tools",
 		`href="/csv-to-json"`,
+		`href="/json-formatter"`,
 		`href="/image-compressor"`,
 		`href="/m3u8-player"`,
 		`href="/privacy-policy"`,
