@@ -940,3 +940,44 @@ func TestHandleIndexRendersImprovedMarkdownParser(t *testing.T) {
 		}
 	}
 }
+
+func TestHandleIndexRendersPDFUnlocker(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/pdf-unlocker", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>PDF Unlocker | Remove PDF Restrictions Online Free - OnlineBox</title>",
+		`<meta name="description" content="Remove copy, print and edit restrictions from PDF files free in your browser. No upload, no server — your PDF stays on your device.">`,
+		`<link rel="canonical" href="https://onlinebox.site/pdf-unlocker">`,
+		`https://cdn.jsdelivr.net/npm/pdf-lib@latest`,
+		`<h1>PDF Unlocker<em>Remove PDF Restrictions in Your Browser</em></h1>`,
+		`Remove copy, print and edit restrictions from PDF files instantly. Everything runs locally — your file never leaves your device.`,
+		`id="pdfUnlockInput"`,
+		`accept="application/pdf,.pdf"`,
+		`id="pdfUnlockDrop"`,
+		`Drop your PDF here`,
+		`id="pdfUnlockButton"`,
+		`id="pdfUnlockStatus"`,
+		`function unlockPDFFile`,
+		`PDFLib.PDFDocument.load(bytes,{ignoreEncryption:true})`,
+		`PDFLib.PDFDocument.create()`,
+		`unlocked.copyPages(source,source.getPageIndices())`,
+		`This tool removes permission restrictions only, not open passwords`,
+		`No PDF selected yet.`,
+		`How to use PDF Unlocker`,
+		`Best use cases`,
+		`PDF Unlocker FAQ`,
+		`copy, print and edit permission flags`,
+		`.pdf-status.loading`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected PDF unlocker page to contain %q", expected)
+		}
+	}
+}

@@ -208,6 +208,17 @@ var publicPages = []publicPage{
 		PageUtility: "markdown",
 	},
 	{
+		Path:        "/pdf-unlocker",
+		Title:       "PDF Unlocker | Remove PDF Restrictions Online Free - OnlineBox",
+		Description: "Remove copy, print and edit restrictions from PDF files free in your browser. No upload, no server — your PDF stays on your device.",
+		Heading:     "PDF Unlocker",
+		Accent:      "Remove PDF Restrictions in Your Browser",
+		Intro:       "Remove copy, print and edit restrictions from PDF files instantly. Everything runs locally — your file never leaves your device.",
+		Kind:        "utility",
+		PageTool:    "compress",
+		PageUtility: "pdf-unlocker",
+	},
+	{
 		Path:        "/m3u8-player",
 		Title:       "M3U8 Player | Free Online HLS Stream Player - OnlineBox",
 		Description: "Play any M3U8 or HLS stream directly in your browser for free. No software, no uploads — just paste the URL and watch.",
@@ -395,6 +406,9 @@ func toolLabel(page publicPage) string {
 	}
 	if page.PageUtility == "m3u8" {
 		return "Video"
+	}
+	if page.PageUtility == "pdf-unlocker" {
+		return "PDF"
 	}
 	return "Creator"
 }
@@ -1007,6 +1021,9 @@ func qrScriptTag(page publicPage) string {
 	if page.PageUtility == "m3u8" {
 		return `<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>`
 	}
+	if page.PageUtility == "pdf-unlocker" {
+		return `<script src="https://cdn.jsdelivr.net/npm/pdf-lib@latest/dist/pdf-lib.min.js"></script>`
+	}
 	if page.PageTool == "exif" {
 		return `<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>`
@@ -1234,6 +1251,17 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 </div>
 </div>
 </section>`
+	case "pdf-unlocker":
+		return `<section class="tool-panel pdf-tool">
+<input id="pdfUnlockInput" class="file-input-hidden" type="file" accept="application/pdf,.pdf" onchange="unlockPDFFile(this.files[0])">
+<div id="pdfUnlockDrop" class="file-drop" role="button" tabindex="0" onclick="document.getElementById('pdfUnlockInput').click()" onkeydown="handlePDFUnlockDropKey(event)">
+<div class="file-drop-icon">PDF</div>
+<strong>Drop your PDF here</strong>
+<span>Choose a PDF and the unlocked copy downloads automatically. Processing stays in this browser.</span>
+</div>
+<button id="pdfUnlockButton" class="btn" onclick="document.getElementById('pdfUnlockInput').click()">Choose PDF</button>
+<div id="pdfUnlockStatus" class="pdf-status" aria-live="polite">No PDF selected yet.</div>
+</section>`
 	case "qr":
 		return `<section class="tool-panel">
 <label for="qrText">QR code content</label>
@@ -1418,6 +1446,25 @@ func landingGuideHTML(page publicPage) string {
 		return utilityGuideHTML("QR code generator", "Enter a link or text, choose foreground and background colors, generate the QR code and download it as PNG.", "It is useful for campaign links, menus, social profiles, business cards and printed materials.")
 	case "/markdown-to-pdf":
 		return utilityGuideHTML("Markdown to PDF", "Paste Markdown text, preview the formatted result and use the browser print dialog to save it as PDF.", "It is useful for project notes, documentation drafts, meeting notes and lightweight formatting.")
+	case "/pdf-unlocker":
+		return `<section class="guide">
+<h2>How to use PDF Unlocker</h2>
+<ol>
+<li>Drop a PDF into the upload area or click Choose PDF.</li>
+<li>The tool rebuilds the PDF locally in your browser with permission restrictions removed.</li>
+<li>The unlocked PDF downloads automatically when processing finishes.</li>
+</ol>
+<h2>Best use cases</h2>
+<p>PDF Unlocker is useful when you own the document or have permission to work with it and need to copy text, print a file, annotate pages, merge documents or edit a PDF in another app. Everything runs locally in your browser, so the PDF is not uploaded to OnlineBox.</p>
+<section class="faq-block">
+<h2>PDF Unlocker FAQ</h2>
+<details open><summary>Does this upload my PDF?</summary><p>No. The PDF is processed in your browser with pdf-lib. The server only delivers the page and JavaScript library.</p></details>
+<details><summary>Can it remove an open password?</summary><p>No. This tool removes permission restrictions only, not open passwords.</p></details>
+<details><summary>What restrictions can it remove?</summary><p>It is designed for copy, print and edit permission flags on PDFs that can already be opened in the browser.</p></details>
+<details><summary>Why did my PDF fail?</summary><p>The file may require an open password, use unsupported encryption or be damaged. Try opening it locally first to confirm the PDF itself works.</p></details>
+<details><summary>Is it okay to unlock any PDF?</summary><p>Use it only for files you own or have permission to modify. Some documents may be protected by legal or workplace rules.</p></details>
+</section>
+</section>`
 	case "/m3u8-player":
 		return `<section class="guide">
 <h2>How to use the M3U8 Player</h2>
@@ -1541,6 +1588,16 @@ function renderMarkdown(print){const preview=document.getElementById('markdownPr
 function loadMarkdownFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{document.getElementById('markdownInput').value=reader.result||'';if(file.name)document.getElementById('markdownTitle').value=file.name.replace(/\.(md|markdown|txt)$/i,'');renderMarkdown(false);};reader.readAsText(file);}
 function saveMarkdownFile(){const blob=new Blob([document.getElementById('markdownInput').value],{type:'text/markdown'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(markdownDocumentTitle().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'markdown-document')+'.md';a.click();URL.revokeObjectURL(url);}
 loadMarkdownDraft();setMarkdownViewMode(document.getElementById('markdownViewMode').value);setMarkdownStyle(document.getElementById('markdownStyle').value);renderMarkdown(false);`
+	case "pdf-unlocker":
+		return `function setPDFUnlockStatus(message,state){const el=document.getElementById('pdfUnlockStatus');el.textContent=message;el.classList.remove('loading','success','error');if(state)el.classList.add(state);}
+function setPDFUnlockBusy(busy){const button=document.getElementById('pdfUnlockButton');button.disabled=busy;button.textContent=busy?'Processing...':'Choose PDF';}
+function pdfUnlockDownload(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
+function pdfUnlockName(file){return 'unlocked_'+(file.name||'document.pdf').replace(/\.pdf$/i,'')+'.pdf';}
+function isOpenPasswordError(error){const message=String(error&&error.message||error||'');return /password|decrypt|encrypted|encryption/i.test(message);}
+async function unlockPDFFile(file){if(!file)return;if(!/\.pdf$/i.test(file.name||'')&&file.type!=='application/pdf'){setPDFUnlockStatus('Please choose a PDF file.','error');return;}if(!window.PDFLib){setPDFUnlockStatus('PDF library is still loading. Try again in a moment.','error');return;}setPDFUnlockBusy(true);setPDFUnlockStatus('Removing PDF permission restrictions locally...','loading');try{const bytes=await file.arrayBuffer();let source;try{source=await PDFLib.PDFDocument.load(bytes,{ignoreEncryption:true});}catch(error){if(isOpenPasswordError(error)){setPDFUnlockStatus('This tool removes permission restrictions only, not open passwords','error');}else{setPDFUnlockStatus('Could not read this PDF file.','error');}return;}const unlocked=await PDFLib.PDFDocument.create();const pages=await unlocked.copyPages(source,source.getPageIndices());pages.forEach(page=>unlocked.addPage(page));const pdfBytes=await unlocked.save();pdfUnlockDownload(new Blob([pdfBytes],{type:'application/pdf'}),pdfUnlockName(file));setPDFUnlockStatus('Unlocked PDF downloaded. Your file never left this browser.','success');}catch(error){if(isOpenPasswordError(error)){setPDFUnlockStatus('This tool removes permission restrictions only, not open passwords','error');}else{setPDFUnlockStatus('Could not unlock this PDF. It may be damaged or use unsupported encryption.','error');}}finally{setPDFUnlockBusy(false);document.getElementById('pdfUnlockInput').value='';}}
+function handlePDFUnlockDropKey(event){if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('pdfUnlockInput').click();}}
+function setupPDFUnlockDrop(){const drop=document.getElementById('pdfUnlockDrop');if(!drop)return;['dragenter','dragover'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.add('over');}));['dragleave','drop'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.remove('over');}));drop.addEventListener('drop',event=>{const file=event.dataTransfer.files&&event.dataTransfer.files[0];unlockPDFFile(file);});}
+setupPDFUnlockDrop();`
 	case "qr":
 		return `function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
 function downloadCanvas(id,filename){document.getElementById(id).toBlob(blob=>{if(blob)downloadBlob(blob,filename);},'image/png');}
@@ -1741,6 +1798,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .json-status{border:1px solid var(--border);background:var(--surface2);border-radius:10px;padding:11px 12px;color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:14px}
 .json-status.valid{border-color:rgba(212,255,87,.26);color:var(--accent);background:var(--accent-dim)}.json-status.invalid{border-color:rgba(255,105,105,.42);color:#ff9a9a;background:rgba(255,105,105,.08)}
 .json-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}.json-area{min-height:430px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.58;tab-size:2}.output-area{background:#141418;color:#f4f4f4}
+.pdf-tool .file-drop-icon{font-size:13px;letter-spacing:.04em}.pdf-status{margin-top:12px;border:1px solid var(--border);background:var(--surface2);border-radius:12px;padding:12px 14px;color:var(--muted);font-size:13px;line-height:1.5}.pdf-status.loading{border-color:rgba(212,255,87,.3);color:var(--accent);background:var(--accent-dim)}.pdf-status.success{border-color:rgba(212,255,87,.3);color:var(--accent)}.pdf-status.error{border-color:rgba(255,105,105,.42);color:#ff9a9a;background:rgba(255,105,105,.08)}.pdf-tool button:disabled{cursor:wait;opacity:.72}
 .preview{font-family:'DM Sans',sans-serif}.preview h1,.preview h2,.preview h3{font-family:'Syne',sans-serif;margin:0 0 10px}.preview h3{font-size:19px;color:var(--accent)}.preview p,.preview li{line-height:1.65;margin-bottom:8px}.preview ul,.preview ol{padding-left:22px;margin:10px 0 14px}.preview blockquote{border-left:3px solid var(--accent);background:rgba(212,255,87,.08);margin:14px 0;padding:10px 14px;color:var(--text)}.preview pre{background:#101114;border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;margin:14px 0}.preview code{background:rgba(255,255,255,.08);border-radius:5px;padding:2px 5px}.preview pre code{background:transparent;padding:0}.preview hr{border:0;border-top:1px solid var(--border);margin:20px 0}.table-wrap{overflow:auto;margin:14px 0}.preview table{width:100%;border-collapse:collapse;min-width:520px}.preview th,.preview td{border:1px solid var(--border);padding:9px 10px;text-align:left}.preview th{color:var(--text);background:rgba(255,255,255,.05)}
 .preview.markdown-body{background:#fff;color:#1f2328;color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;white-space:normal;--color-canvas-default:#fff;--color-canvas-subtle:#f6f8fa;--color-fg-default:#1f2328;--color-fg-muted:#59636e;--color-border-default:#d0d7de;--color-border-muted:#d8dee4}.preview.markdown-body h1,.preview.markdown-body h2,.preview.markdown-body h3{font-family:inherit;color:#1f2328}.preview.markdown-body h3{font-size:1.25em}.preview.markdown-body blockquote{background:transparent;color:#59636e;border-left-color:#d0d7de}.preview.markdown-body pre{background:#f6f8fa;border:0;color:#1f2328}.preview.markdown-body code{background:rgba(175,184,193,.2);color:#1f2328}.preview.markdown-body pre code{background:transparent;color:#1f2328}.preview.markdown-body table{display:table;width:100%;background:#fff;color:#1f2328}.preview.markdown-body th{background:#f6f8fa;color:#1f2328}.preview.markdown-body td{background:#fff;color:#1f2328}
 .canvas-wrap{display:flex;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;overflow:auto}
