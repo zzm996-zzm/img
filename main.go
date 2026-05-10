@@ -1019,7 +1019,12 @@ func qrScriptTag(page publicPage) string {
 
 func markdownCSSLink(page publicPage) string {
 	if page.PageUtility == "markdown" {
-		return `<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css">`
+		return `<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>`
 	}
 	return ""
 }
@@ -1162,9 +1167,33 @@ Bob,bob@example.com,pro</textarea>
 </div>
 </section>`
 	case "markdown":
-		return `<section class="tool-panel">
+		return `<section class="tool-panel markdown-tool">
+<div class="markdown-toolbar">
+<div class="toolbar-group">
+<label for="markdownViewMode">View</label>
+<select id="markdownViewMode" onchange="setMarkdownViewMode(this.value)"><option value="split" selected>Split</option><option value="editor">Editor only</option><option value="preview">Preview only</option></select>
+</div>
+<div class="toolbar-group">
+<label for="markdownStyle">Style</label>
+<select id="markdownStyle" onchange="setMarkdownStyle(this.value)"><option value="Default" selected>Default</option><option value="Academic">Academic</option><option value="Minimal">Minimal</option></select>
+</div>
+<div class="toolbar-group title-field">
+<label for="markdownTitle">PDF title</label>
+<input id="markdownTitle" value="Markdown PDF" oninput="renderMarkdown(false)">
+</div>
+<button class="btn compact" onclick="renderMarkdown(true)">Export PDF</button>
+</div>
+<div class="markdown-actions">
+<input id="markdownFileInput" class="file-input-hidden" type="file" accept=".md,.markdown,text/markdown,text/plain" onchange="loadMarkdownFile(this.files[0])">
+<button class="ghost compact" onclick="document.getElementById('markdownFileInput').click()">Open .md</button>
+<button class="ghost compact" onclick="saveMarkdownFile()">Save .md</button>
+<span id="markdownStats" class="markdown-stat">0 words</span>
+<span id="markdownDraftStatus" class="markdown-stat">Draft saved locally</span>
+</div>
+<div id="markdownWorkbench" class="markdown-workbench split" data-style="Default">
+<div class="markdown-pane editor-pane">
 <label for="markdownInput">Markdown input</label>
-<textarea id="markdownInput" spellcheck="false"># Weekly Project Report
+<textarea id="markdownInput" spellcheck="false" oninput="renderMarkdown(false)"># Weekly Project Report
 
 ## Completed This Week
 
@@ -1191,8 +1220,12 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
     defer file.Close()
 }
 &#96;&#96;&#96;</textarea>
-<button class="btn" onclick="renderMarkdown(true)">Preview and print PDF</button>
-<div id="markdownPreview" class="output preview markdown-body"></div>
+</div>
+<div class="markdown-pane preview-pane">
+<div class="pane-label">Live preview</div>
+<div id="markdownPreview" class="markdown-preview output preview markdown-body" data-style="Default"></div>
+</div>
+</div>
 </section>`
 	case "qr":
 		return `<section class="tool-panel">
@@ -1471,7 +1504,8 @@ document.getElementById('jsonInput').addEventListener('input',()=>{const parsed=
 formatJSON();`
 	case "markdown":
 		return `function escapeHTML(value){return value.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
-function inlineMarkdown(text){return escapeHTML(text).replace(/\x60([^\x60]+)\x60/g,'<code>$1</code>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>');}
+const MARKDOWN_STORAGE_KEY='onlinebox.markdownToPdf.draft.v2';
+function inlineMarkdown(text){return escapeHTML(text).replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g,'<a href="$2">$1</a>').replace(/\x60([^\x60]+)\x60/g,'<code>$1</code>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>');}
 function splitTableRow(line){let value=line.trim();if(value.startsWith('|'))value=value.slice(1);if(value.endsWith('|'))value=value.slice(0,-1);return value.split('|').map(cell=>cell.trim());}
 function isTableDivider(line){return /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);}
 function closeBlocks(state){if(state.inList){state.html+='</'+state.listTag+'>';state.inList=false;state.listTag='';}if(state.inQuote){state.html+='</blockquote>';state.inQuote=false;}}
@@ -1479,9 +1513,20 @@ function addListItem(state,tag,text){if(state.inQuote){state.html+='</blockquote
 function renderTable(lines,start,state){const headers=splitTableRow(lines[start]);let index=start+2;let body='';while(index<lines.length&&lines[index].includes('|')&&lines[index].trim()&&!isTableDivider(lines[index])){body+='<tr>'+splitTableRow(lines[index]).map(cell=>'<td>'+inlineMarkdown(cell)+'</td>').join('')+'</tr>';index++;}closeBlocks(state);state.html+='<div class="table-wrap"><table><thead><tr>'+headers.map(cell=>'<th>'+inlineMarkdown(cell)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div>';return index-1;}
 function markdownToHTML(markdown){const lines=markdown.split(/\r?\n/);const state={html:'',inList:false,inQuote:false,listTag:''};let inCode=false,code='',codeLang='';for(let i=0;i<lines.length;i++){const raw=lines[i],line=raw.trim();if(line.startsWith('\x60\x60\x60')){if(inCode){state.html+='<pre><code class="language-'+escapeHTML(codeLang)+'">'+escapeHTML(code.replace(/\n$/,''))+'</code></pre>';inCode=false;code='';codeLang='';}else{closeBlocks(state);inCode=true;codeLang=line.slice(3).trim();}continue;}if(inCode){code+=raw+'\n';continue;}if(!line){closeBlocks(state);continue;}if(i+1<lines.length&&line.includes('|')&&isTableDivider(lines[i+1])){i=renderTable(lines,i,state);continue;}if(line==='---'||line==='***'){closeBlocks(state);state.html+='<hr>';continue;}if(line.startsWith('> ')){if(state.inList){state.html+='</'+state.listTag+'>';state.inList=false;state.listTag='';}if(!state.inQuote){state.html+='<blockquote>';state.inQuote=true;}state.html+='<p>'+inlineMarkdown(line.slice(2))+'</p>';continue;}if(line.startsWith('### ')){closeBlocks(state);state.html+='<h3>'+inlineMarkdown(line.slice(4))+'</h3>';}else if(line.startsWith('## ')){closeBlocks(state);state.html+='<h2>'+inlineMarkdown(line.slice(3))+'</h2>';}else if(line.startsWith('# ')){closeBlocks(state);state.html+='<h1>'+inlineMarkdown(line.slice(2))+'</h1>';}else if(/^[-*]\s+/.test(line)){addListItem(state,'ul',line.replace(/^[-*]\s+/,''));}else if(/^\d+\.\s+/.test(line)){addListItem(state,'ol',line.replace(/^\d+\.\s+/,''));}else{closeBlocks(state);state.html+='<p>'+inlineMarkdown(line)+'</p>';}}if(inCode){state.html+='<pre><code>'+escapeHTML(code.replace(/\n$/,''))+'</code></pre>';}closeBlocks(state);return state.html;}
 const markdownCSSHref='https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.1/github-markdown.min.css';
-const markdownPrintStyle='@page{margin:16mm 14mm}body.markdown-body{box-sizing:border-box;max-width:860px;margin:40px auto;padding:0 32px;color:#1f2328;background:#fff;color-scheme:light;--color-canvas-default:#fff;--color-canvas-subtle:#f6f8fa;--color-fg-default:#1f2328;--color-fg-muted:#59636e;--color-border-default:#d0d7de;--color-border-muted:#d8dee4}table{display:table;width:100%;color:#1f2328;background:#fff}th{background:#f6f8fa;color:#1f2328}td{color:#1f2328;background:#fff}pre{white-space:pre-wrap;word-break:break-word;background:#f6f8fa;color:#1f2328}pre code{color:#1f2328}code{color:#1f2328}pre,table,blockquote{break-inside:avoid;page-break-inside:avoid}h1,h2,h3{break-after:avoid;page-break-after:avoid}p,li{orphans:3;widows:3}@media print{body.markdown-body{max-width:none;margin:0;padding:0}pre{overflow:visible}}';
-function renderMarkdown(print){const html=markdownToHTML(document.getElementById('markdownInput').value);document.getElementById('markdownPreview').innerHTML=html;if(print){const w=window.open('','_blank');w.document.write('<!doctype html><html><head><title>Markdown PDF</title><link rel="stylesheet" href="'+markdownCSSHref+'"><style>'+markdownPrintStyle+'</style></head><body class="markdown-body">'+html+'<script>let printed=false;function printWhenReady(){if(printed)return;printed=true;setTimeout(()=>window.print(),100)}const sheet=document.querySelector(\'link[rel=stylesheet]\');if(sheet){sheet.addEventListener(\'load\',printWhenReady,{once:true});sheet.addEventListener(\'error\',printWhenReady,{once:true});}setTimeout(printWhenReady,1500);<\/script></body></html>');w.document.close();}}
-renderMarkdown(false);`
+const markdownKatexCSS='https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css';
+const markdownHighlightCSS='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
+const markdownPrintStyle='@page{margin:16mm 14mm}body.markdown-body{box-sizing:border-box;max-width:860px;margin:40px auto;padding:0 32px;color:#1f2328;background:#fff;color-scheme:light;--color-canvas-default:#fff;--color-canvas-subtle:#f6f8fa;--color-fg-default:#1f2328;--color-fg-muted:#59636e;--color-border-default:#d0d7de;--color-border-muted:#d8dee4}body.academic{font-family:Georgia,"Times New Roman",serif;max-width:780px}body.minimal{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;max-width:820px}body.minimal h1,body.minimal h2{border-bottom:0}table{display:table;width:100%;color:#1f2328;background:#fff}th{background:#f6f8fa;color:#1f2328}td{color:#1f2328;background:#fff}pre{white-space:pre-wrap;word-break:break-word;background:#f6f8fa;color:#1f2328}pre code{color:#1f2328}code{color:#1f2328}pre,table,blockquote{break-inside:avoid;page-break-inside:avoid}h1,h2,h3{break-after:avoid;page-break-after:avoid}p,li{orphans:3;widows:3}@media print{body.markdown-body{max-width:none;margin:0;padding:0}pre{overflow:visible}}';
+function markdownDocumentTitle(){return (document.getElementById('markdownTitle').value||'Markdown PDF').trim()||'Markdown PDF';}
+function updateMarkdownStats(){const text=document.getElementById('markdownInput').value;const words=(text.trim().match(/\S+/g)||[]).length;const chars=text.length;document.getElementById('markdownStats').textContent=words+' words · '+chars+' chars';}
+function saveMarkdownDraft(){const payload={title:document.getElementById('markdownTitle').value,markdown:document.getElementById('markdownInput').value,style:document.getElementById('markdownStyle').value,view:document.getElementById('markdownViewMode').value,updatedAt:Date.now()};localStorage.setItem(MARKDOWN_STORAGE_KEY,JSON.stringify(payload));document.getElementById('markdownDraftStatus').textContent='Draft saved locally';}
+function loadMarkdownDraft(){try{const raw=localStorage.getItem(MARKDOWN_STORAGE_KEY);if(!raw)return;const draft=JSON.parse(raw);if(draft.markdown)document.getElementById('markdownInput').value=draft.markdown;if(draft.title)document.getElementById('markdownTitle').value=draft.title;if(draft.style)document.getElementById('markdownStyle').value=draft.style;if(draft.view)document.getElementById('markdownViewMode').value=draft.view;}catch(error){}}
+function setMarkdownViewMode(mode){const safe=['split','editor','preview'].includes(mode)?mode:'split';const workbench=document.getElementById('markdownWorkbench');workbench.classList.remove('split','editor','preview');workbench.classList.add(safe);saveMarkdownDraft();}
+function setMarkdownStyle(style){const safe=['Default','Academic','Minimal'].includes(style)?style:'Default';document.getElementById('markdownWorkbench').dataset.style=safe;document.getElementById('markdownPreview').dataset.style=safe;saveMarkdownDraft();renderMarkdown(false);}
+function applyMarkdownEnhancements(target){if(window.hljs){target.querySelectorAll('pre code').forEach(block=>hljs.highlightElement(block));}if(window.renderMathInElement){renderMathInElement(target,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\\\(',right:'\\\\)',display:false},{left:'\\\\[',right:'\\\\]',display:true}],throwOnError:false});}}
+function renderMarkdown(print){const preview=document.getElementById('markdownPreview');preview.innerHTML=markdownToHTML(document.getElementById('markdownInput').value);applyMarkdownEnhancements(preview);updateMarkdownStats();if(!print){saveMarkdownDraft();return;}const style=document.getElementById('markdownStyle').value;const bodyClass=style==='Academic'?'academic':style==='Minimal'?'minimal':'';const html=preview.innerHTML;const w=window.open('','_blank');w.document.write('<!doctype html><html><head><title>'+escapeHTML(markdownDocumentTitle())+'</title><link rel="stylesheet" href="'+markdownCSSHref+'"><link rel="stylesheet" href="'+markdownKatexCSS+'"><link rel="stylesheet" href="'+markdownHighlightCSS+'"><style>'+markdownPrintStyle+'</style></head><body class="markdown-body '+bodyClass+'">'+html+'<script>let printed=false;function printWhenReady(){if(printed)return;printed=true;setTimeout(()=>window.print(),120)}window.addEventListener(\"load\",printWhenReady);setTimeout(printWhenReady,1500);<\/script></body></html>');w.document.close();}
+function loadMarkdownFile(file){if(!file)return;const reader=new FileReader();reader.onload=()=>{document.getElementById('markdownInput').value=reader.result||'';if(file.name)document.getElementById('markdownTitle').value=file.name.replace(/\.(md|markdown|txt)$/i,'');renderMarkdown(false);};reader.readAsText(file);}
+function saveMarkdownFile(){const blob=new Blob([document.getElementById('markdownInput').value],{type:'text/markdown'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=(markdownDocumentTitle().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'markdown-document')+'.md';a.click();URL.revokeObjectURL(url);}
+loadMarkdownDraft();setMarkdownViewMode(document.getElementById('markdownViewMode').value);setMarkdownStyle(document.getElementById('markdownStyle').value);renderMarkdown(false);`
 	case "qr":
 		return `function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
 function downloadCanvas(id,filename){document.getElementById(id).toBlob(blob=>{if(blob)downloadBlob(blob,filename);},'image/png');}
@@ -1667,6 +1712,14 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .ghost,.chip{border:1px solid var(--border);background:transparent;color:var(--text);border-radius:10px;padding:10px 12px;font-weight:800;cursor:pointer;margin-top:10px}
 .choices{display:flex;gap:8px;flex-wrap:wrap}.chip.on{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
 .output{background:var(--surface2);border:1px solid var(--border);border-radius:12px;min-height:170px;padding:16px;margin-top:16px;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.55}
+.markdown-tool{width:min(1180px,calc(100vw - 44px));margin-left:50%;transform:translateX(-50%)}
+.markdown-toolbar{display:grid;grid-template-columns:140px 150px minmax(180px,1fr) auto;gap:12px;align-items:end;margin-bottom:12px}
+.toolbar-group{display:grid;gap:6px}.toolbar-group label,.markdown-pane label,.pane-label{margin:0;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.title-field input{height:42px}
+.markdown-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}.markdown-stat{color:var(--muted);font-size:12px;font-weight:800;margin-left:auto}.markdown-stat+ .markdown-stat{margin-left:0}
+.markdown-workbench{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;min-height:calc(100vh - 360px)}
+.markdown-workbench.editor{grid-template-columns:1fr}.markdown-workbench.preview{grid-template-columns:1fr}.markdown-workbench.editor .preview-pane,.markdown-workbench.preview .editor-pane{display:none}
+.markdown-pane{min-width:0;display:flex;flex-direction:column;gap:8px}.markdown-pane textarea{min-height:560px;height:calc(100vh - 430px);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.62}
+.markdown-preview{min-height:560px;height:calc(100vh - 430px);overflow:auto;background:#fff;color:#1f2328;color-scheme:light;white-space:normal}.markdown-preview[data-style="Academic"]{font-family:Georgia,"Times New Roman",serif}.markdown-preview[data-style="Academic"] h1,.markdown-preview[data-style="Academic"] h2,.markdown-preview[data-style="Academic"] h3{font-family:Georgia,"Times New Roman",serif}.markdown-preview[data-style="Minimal"]{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;border-color:#e5e7eb;box-shadow:none}.markdown-preview[data-style="Minimal"] h1,.markdown-preview[data-style="Minimal"] h2{border-bottom:0}
 .json-tool{width:min(1120px,calc(100vw - 44px));margin-left:50%;transform:translateX(-50%)}
 .json-toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
 .json-status{border:1px solid var(--border);background:var(--surface2);border-radius:10px;padding:11px 12px;color:var(--muted);font-size:13px;line-height:1.5;margin-bottom:14px}
@@ -1690,6 +1743,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .related{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:30px}.related a{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);text-decoration:none;padding:12px;font-weight:800}
 .site-footer{border-top:1px solid var(--border);margin-top:34px;padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.site-footer a{color:var(--text);text-decoration:none;font-weight:800}
 @media(max-width:760px){.json-columns{grid-template-columns:1fr}.json-area{min-height:300px}.json-toolbar .compact{flex:1 1 calc(50% - 8px)}}
+@media(max-width:760px){.markdown-toolbar,.markdown-workbench{grid-template-columns:1fr}.markdown-workbench{min-height:auto}.markdown-pane textarea,.markdown-preview{height:auto;min-height:420px}.markdown-stat{margin-left:0}}
 @media(max-width:620px){.two,.related{grid-template-columns:1fr}.wrap{padding-top:30px}.m3u8-input-row{grid-template-columns:1fr}.m3u8-play-btn{width:100%}.m3u8-controls{grid-template-columns:auto 1fr auto;gap:7px}.m3u8-progress{grid-column:1/-1;grid-row:1}#m3u8Current{display:none}.m3u8-volume{width:76px}.speed-group{grid-column:1/-1;justify-content:flex-start}.m3u8-time{min-width:36px}}
 </style>
 </head>
