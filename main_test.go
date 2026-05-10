@@ -535,6 +535,60 @@ func TestHandleIndexRendersM3U8Player(t *testing.T) {
 	}
 }
 
+func TestHandleIndexRendersEXIFViewer(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/exif-viewer", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>EXIF Viewer and Remover | Check and Remove Photo Metadata</title>",
+		"<h1>EXIF viewer<em>view and remove photo metadata</em></h1>",
+		`<link rel="canonical" href="https://onlinebox.site/exif-viewer">`,
+		`exifr/dist/lite.umd.js`,
+		`id="exifOutput"`,
+		`function loadEXIFMetadata()`,
+		`function downloadWithoutMetadata()`,
+		"GPS location data",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected EXIF page to contain %q", expected)
+		}
+	}
+}
+
+func TestHandleIndexRendersImageWatermarkTool(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/image-watermark", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>Add Watermark to Image | Free Online Watermark Tool</title>",
+		"<h1>Image watermark<em>add text watermark online</em></h1>",
+		`<link rel="canonical" href="https://onlinebox.site/image-watermark">`,
+		`id="watermarkText"`,
+		`id="watermarkOpacity"`,
+		`function renderWatermarkPreview()`,
+		`function downloadWatermarkedImage()`,
+		"Download watermarked JPG",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected watermark page to contain %q", expected)
+		}
+	}
+}
+
 func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 	t.Setenv("SITE_URL", "https://onlinebox.site/")
 	req := httptest.NewRequest(http.MethodGet, "/", nil)

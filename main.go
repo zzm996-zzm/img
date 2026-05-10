@@ -122,6 +122,26 @@ var publicPages = []publicPage{
 		PageTool:    "batch",
 	},
 	{
+		Path:        "/exif-viewer",
+		Title:       "EXIF Viewer and Remover | Check and Remove Photo Metadata",
+		Description: "View and remove photo EXIF metadata online. Check camera, date and GPS data, then export a clean JPG locally in your browser.",
+		Heading:     "EXIF viewer",
+		Accent:      "view and remove photo metadata",
+		Intro:       "Upload a photo to inspect EXIF metadata such as camera model, date, lens and GPS fields, then download a clean JPG with metadata removed.",
+		Kind:        "image",
+		PageTool:    "exif",
+	},
+	{
+		Path:        "/image-watermark",
+		Title:       "Add Watermark to Image | Free Online Watermark Tool",
+		Description: "Add a text watermark to an image online. Choose position, size and opacity, then download a watermarked JPG locally in your browser.",
+		Heading:     "Image watermark",
+		Accent:      "add text watermark online",
+		Intro:       "Upload an image, add your brand or handle as a text watermark, adjust placement and opacity, then download the result.",
+		Kind:        "image",
+		PageTool:    "watermark",
+	},
+	{
 		Path:        "/qr-code-generator",
 		Title:       "QR Code Generator | Free Online QR Code PNG",
 		Description: "Generate a QR code online from a link or text, customize colors and download a PNG image for campaigns, menus, profiles and print materials.",
@@ -773,7 +793,11 @@ func qrScriptTag(page publicPage) string {
 	if page.PageUtility == "m3u8" {
 		return `<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>`
 	}
-	if page.PageTool == "compress" || page.PageTool == "convert" || page.PageTool == "resize" {
+	if page.PageTool == "exif" {
+		return `<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>`
+	}
+	if page.PageTool == "compress" || page.PageTool == "convert" || page.PageTool == "resize" || page.PageTool == "watermark" {
 		return `<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>`
 	}
 	return ""
@@ -1018,6 +1042,10 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 		return imageToolHTML("Output format", `<div class="choices"><button class="chip on" onclick="setFormat('image/jpeg','JPG',this)">JPG</button><button class="chip" onclick="setFormat('image/png','PNG',this)">PNG</button><button class="chip" onclick="setFormat('image/webp','WebP',this)">WebP</button></div>`, "Convert image", "convertImage()")
 	case "resize":
 		return imageToolHTML("Output size", `<div class="grid two"><input id="resizeW" type="number" value="200" min="1" max="12000" aria-label="Width"><input id="resizeH" type="number" value="200" min="1" max="12000" aria-label="Height"></div><div class="choices"><button class="chip on" onclick="setResizeMode('contain',this)">Contain</button><button class="chip" onclick="setResizeMode('cover',this)">Cover</button><button class="chip" onclick="setResizeMode('stretch',this)">Stretch</button></div>`, "Resize image", "resizeImage()")
+	case "exif":
+		return imageToolHTML("Metadata actions", `<div class="choices"><button class="chip on" onclick="loadEXIFMetadata()">View EXIF</button><button class="chip" onclick="downloadWithoutMetadata()">Remove metadata</button></div><pre id="exifOutput" class="output">Choose a photo to inspect EXIF metadata.</pre>`, "Download clean JPG", "downloadWithoutMetadata()")
+	case "watermark":
+		return imageToolHTML("Watermark settings", `<label for="watermarkText">Watermark text</label><input id="watermarkText" value="onlinebox.site" oninput="renderWatermarkPreview()"><div class="grid two"><label for="watermarkSize">Text size<input id="watermarkSize" type="number" value="42" min="10" max="220" oninput="renderWatermarkPreview()"></label><label for="watermarkOpacity">Opacity<input id="watermarkOpacity" type="range" value="0.55" min="0.1" max="1" step="0.05" oninput="renderWatermarkPreview()"></label></div><label for="watermarkPosition">Position</label><select id="watermarkPosition" onchange="renderWatermarkPreview()"><option value="bottom-right">Bottom right</option><option value="bottom-left">Bottom left</option><option value="top-right">Top right</option><option value="top-left">Top left</option><option value="center">Center</option></select>`, "Download watermarked JPG", "downloadWatermarkedImage()")
 	case "batch":
 		return `<section class="tool-panel">
 <label for="batchInput">Choose images</label>
@@ -1120,6 +1148,10 @@ func landingGuideHTML(page publicPage) string {
 		return imageGuideHTML("image resizer", "Enter the target width and height, choose contain, cover or stretch mode, then upload an image and resize it.", "It is useful for avatars, product photos, social covers, form uploads and fixed-ratio design assets.")
 	case "/batch-image-compressor":
 		return imageGuideHTML("batch image compressor", "Select multiple JPG, PNG or WebP images, choose a target size per image, then click Compress batch. Each compressed file downloads separately as it finishes.", "It is useful when you need to prepare product photos, document scans, marketplace images or social media assets with the same file-size limit.")
+	case "/exif-viewer":
+		return imageGuideHTML("EXIF viewer and remover", "Upload a photo to view EXIF metadata. If you want a privacy-safe copy, click Remove metadata or Download clean JPG to export a new JPG without embedded metadata.", "It is useful before sharing iPhone or camera photos online because EXIF can include device, capture date, lens settings and sometimes GPS location data.")
+	case "/image-watermark":
+		return imageGuideHTML("image watermark tool", "Upload an image, enter watermark text, choose position, size and opacity, then download a watermarked JPG.", "It is useful for creator previews, marketplace images, portfolio samples and quick brand marks before posting images publicly.")
 	case "/qr-code-generator":
 		return utilityGuideHTML("QR code generator", "Enter a link or text, choose foreground and background colors, generate the QR code and download it as PNG.", "It is useful for campaign links, menus, social profiles, business cards and printed materials.")
 	case "/markdown-to-pdf":
@@ -1188,6 +1220,12 @@ func landingScript(page publicPage) string {
 	}
 	if page.PageTool == "batch" {
 		return batchImageLandingScript()
+	}
+	if page.PageTool == "exif" {
+		return imageLandingScript() + "\n" + exifLandingScript()
+	}
+	if page.PageTool == "watermark" {
+		return imageLandingScript() + "\n" + watermarkLandingScript()
 	}
 	return imageLandingScript()
 }
@@ -1277,7 +1315,7 @@ function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a
 function isHEICFile(file){const name=(file&&file.name||'').toLowerCase();const type=(file&&file.type||'').toLowerCase();return type==='image/heic'||type==='image/heif'||name.endsWith('.heic')||name.endsWith('.heif');}
 function canLoadImageFile(file){return !!file&&(file.type.startsWith('image/')||isHEICFile(file));}
 function drawLoadedImage(file,img,previewURL,note){selectedImage=img;const canvas=document.getElementById('imageCanvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);document.getElementById('imageInfo').textContent=file.name+' · '+(file.size/1024).toFixed(1)+' KB'+(note? ' · '+note:'');if(previewURL)URL.revokeObjectURL(previewURL);}
-async function loadImageFile(file){if(!canLoadImageFile(file)){setStatus('Please choose a HEIC, HEIF, JPG, PNG or WebP image');return;}selectedFile=file;selectedImage=null;setStatus('Loading image locally...');try{let sourceBlob=file,note='';if(isHEICFile(file)){if(!window.heic2any){setStatus('HEIC support is still loading. Try again in a moment.');return;}setStatus('Converting HEIC preview locally...');sourceBlob=await heic2any({blob:file,toType:'image/jpeg',quality:.92});if(Array.isArray(sourceBlob))sourceBlob=sourceBlob[0];note='HEIC decoded locally';}const img=new Image();const previewURL=URL.createObjectURL(sourceBlob);img.onload=()=>{drawLoadedImage(file,img,previewURL,note);setStatus(isHEICFile(file)?'HEIC loaded. Choose JPG and click Convert image.':'Image loaded locally.');};img.onerror=()=>{URL.revokeObjectURL(previewURL);setStatus('This image could not be loaded in the browser.');};img.src=previewURL;}catch(error){setStatus('Could not decode this image. Try another file or export it from Photos first.');}}
+async function loadImageFile(file){if(!canLoadImageFile(file)){setStatus('Please choose a HEIC, HEIF, JPG, PNG or WebP image');return false;}selectedFile=file;selectedImage=null;setStatus('Loading image locally...');try{let sourceBlob=file,note='';if(isHEICFile(file)){if(!window.heic2any){setStatus('HEIC support is still loading. Try again in a moment.');return false;}setStatus('Converting HEIC preview locally...');sourceBlob=await heic2any({blob:file,toType:'image/jpeg',quality:.92});if(Array.isArray(sourceBlob))sourceBlob=sourceBlob[0];note='HEIC decoded locally';}const img=new Image();const previewURL=URL.createObjectURL(sourceBlob);return await new Promise(resolve=>{img.onload=()=>{drawLoadedImage(file,img,previewURL,note);setStatus(isHEICFile(file)?'HEIC loaded. Choose JPG and click Convert image.':'Image loaded locally.');resolve(true);};img.onerror=()=>{URL.revokeObjectURL(previewURL);setStatus('This image could not be loaded in the browser.');resolve(false);};img.src=previewURL;});}catch(error){setStatus('Could not decode this image. Try another file or export it from Photos first.');return false;}}
 function setTarget(kb){const input=document.getElementById('targetKB');if(input)input.value=kb;}
 function setFormat(type,label,el){outputType=type;outputLabel=label;document.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
 function setResizeMode(mode,el){resizeMode=mode;document.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));el.classList.add('on');}
@@ -1285,6 +1323,22 @@ function imageToBlob(canvas,type,quality){return new Promise(resolve=>canvas.toB
 async function compressImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const targetBytes=(parseFloat(document.getElementById('targetKB').value)||200)*1024;const canvas=document.getElementById('imageCanvas');let low=.02,high=.95,best=null;for(let i=0;i<10;i++){const q=(low+high)/2;const blob=await imageToBlob(canvas,'image/jpeg',q);if(blob.size<=targetBytes){best=blob;low=q;}else{high=q;}}if(!best)best=await imageToBlob(canvas,'image/jpeg',.02);downloadBlob(best,'compressed_'+selectedFile.name.replace(/\.[^.]+$/,'')+'.jpg');setStatus('Compressed to '+(best.size/1024).toFixed(1)+' KB');}
 async function convertImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const canvas=document.getElementById('imageCanvas');const ctx=canvas.getContext('2d');if(outputType==='image/jpeg'){ctx.globalCompositeOperation='destination-over';ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalCompositeOperation='source-over';}const blob=await imageToBlob(canvas,outputType,.92);const ext=outputType==='image/png'?'.png':outputType==='image/webp'?'.webp':'.jpg';downloadBlob(blob,'converted_'+selectedFile.name.replace(/\.[^.]+$/,'')+ext);setStatus('Converted to '+outputLabel+' · '+(blob.size/1024).toFixed(1)+' KB');}
 async function resizeImage(){if(!selectedFile||!selectedImage){setStatus('Please choose an image first');return;}const width=parseInt(document.getElementById('resizeW').value,10),height=parseInt(document.getElementById('resizeH').value,10);if(!width||!height){setStatus('Enter a valid width and height');return;}const canvas=document.getElementById('imageCanvas');canvas.width=width;canvas.height=height;const ctx=canvas.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);let sx=0,sy=0,sw=selectedImage.naturalWidth,sh=selectedImage.naturalHeight,dx=0,dy=0,dw=width,dh=height;if(resizeMode==='contain'){const scale=Math.min(width/sw,height/sh);dw=sw*scale;dh=sh*scale;dx=(width-dw)/2;dy=(height-dh)/2;}else if(resizeMode==='cover'){const target=width/height,ratio=sw/sh;if(ratio>target){sw=sh*target;sx=(selectedImage.naturalWidth-sw)/2;}else{sh=sw/target;sy=(selectedImage.naturalHeight-sh)/2;}}ctx.drawImage(selectedImage,sx,sy,sw,sh,dx,dy,dw,dh);const blob=await imageToBlob(canvas,'image/jpeg',.92);downloadBlob(blob,'resized_'+selectedFile.name.replace(/\.[^.]+$/,'')+'_'+width+'x'+height+'.jpg');setStatus('Resized to '+width+'x'+height+' · '+(blob.size/1024).toFixed(1)+' KB');}`
+}
+
+func exifLandingScript() string {
+	return `const originalLoadImageFile=loadImageFile;
+loadImageFile=async function(file){const loaded=await originalLoadImageFile(file);if(loaded)loadEXIFMetadata();return loaded;};
+function formatEXIFValue(value){if(value===null||value===undefined)return '';if(value instanceof Date)return value.toISOString();if(Array.isArray(value))return value.map(formatEXIFValue).join(', ');if(typeof value==='object'){if('description' in value)return value.description;try{return JSON.stringify(value);}catch(error){return String(value);}}return String(value);}
+async function loadEXIFMetadata(){const output=document.getElementById('exifOutput');if(!selectedFile){output.textContent='Choose a photo to inspect EXIF metadata.';return;}if(isHEICFile(selectedFile)){output.textContent='HEIC preview can be converted locally. EXIF reading depends on browser support for the original file.';}if(!window.exifr){output.textContent='EXIF library is still loading. Try again in a moment.';return;}try{const data=await exifr.parse(selectedFile,{tiff:true,ifd0:true,exif:true,gps:true,interop:true,iptc:true,xmp:true});if(!data||!Object.keys(data).length){output.textContent='No readable EXIF metadata found. Some apps remove metadata before export.';return;}const preferred=['Make','Model','LensModel','DateTimeOriginal','CreateDate','ModifyDate','ExposureTime','FNumber','ISO','FocalLength','GPSLatitude','GPSLongitude','Software','Artist','Copyright'];const rows=[];preferred.forEach(key=>{if(data[key]!==undefined)rows.push(key+': '+formatEXIFValue(data[key]));});Object.keys(data).sort().forEach(key=>{if(!preferred.includes(key))rows.push(key+': '+formatEXIFValue(data[key]));});output.textContent=rows.join('\n');setStatus('EXIF metadata loaded locally.');}catch(error){output.textContent='Could not read EXIF metadata from this file.';}}
+async function downloadWithoutMetadata(){if(!selectedFile||!selectedImage){setStatus('Choose a photo first.');return;}const canvas=document.getElementById('imageCanvas');const ctx=canvas.getContext('2d');ctx.globalCompositeOperation='destination-over';ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalCompositeOperation='source-over';const blob=await imageToBlob(canvas,'image/jpeg',.92);downloadBlob(blob,'metadata_removed_'+selectedFile.name.replace(/\.[^.]+$/,'')+'.jpg');setStatus('Downloaded a clean JPG. Canvas export removes embedded EXIF metadata.');}`
+}
+
+func watermarkLandingScript() string {
+	return `const originalLoadImageFile=loadImageFile;
+loadImageFile=async function(file){const loaded=await originalLoadImageFile(file);if(loaded)renderWatermarkPreview();return loaded;};
+function watermarkPoint(canvas,textWidth,size){const pos=document.getElementById('watermarkPosition').value;const pad=Math.max(18,Math.round(size*.6));if(pos==='top-left')return {x:pad,y:pad+size};if(pos==='top-right')return {x:canvas.width-pad-textWidth,y:pad+size};if(pos==='bottom-left')return {x:pad,y:canvas.height-pad};if(pos==='center')return {x:(canvas.width-textWidth)/2,y:canvas.height/2};return {x:canvas.width-pad-textWidth,y:canvas.height-pad};}
+function renderWatermarkPreview(){if(!selectedImage)return;const canvas=document.getElementById('imageCanvas');canvas.width=selectedImage.naturalWidth;canvas.height=selectedImage.naturalHeight;const ctx=canvas.getContext('2d');ctx.drawImage(selectedImage,0,0);const text=(document.getElementById('watermarkText').value||'onlinebox.site').trim();if(!text)return;const size=parseInt(document.getElementById('watermarkSize').value,10)||42;const opacity=parseFloat(document.getElementById('watermarkOpacity').value)||.55;ctx.save();ctx.globalAlpha=opacity;ctx.font='800 '+size+'px sans-serif';ctx.textBaseline='alphabetic';const width=ctx.measureText(text).width;const point=watermarkPoint(canvas,width,size);ctx.lineWidth=Math.max(3,Math.round(size/12));ctx.strokeStyle='rgba(0,0,0,.72)';ctx.fillStyle='#ffffff';ctx.strokeText(text,point.x,point.y);ctx.fillText(text,point.x,point.y);ctx.restore();setStatus('Watermark preview updated locally.');}
+async function downloadWatermarkedImage(){if(!selectedFile||!selectedImage){setStatus('Choose an image first.');return;}renderWatermarkPreview();const canvas=document.getElementById('imageCanvas');const blob=await imageToBlob(canvas,'image/jpeg',.92);downloadBlob(blob,'watermarked_'+selectedFile.name.replace(/\.[^.]+$/,'')+'.jpg');setStatus('Downloaded watermarked JPG.');}`
 }
 
 func batchImageLandingScript() string {
