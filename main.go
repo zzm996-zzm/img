@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -210,6 +211,23 @@ var publicPages = []publicPage{
 
 var publicPageByPath = map[string]publicPage{}
 
+type blogPost struct {
+	Slug        string
+	Title       string
+	Date        string
+	Description string
+	ContentHTML string
+	dateValue   time.Time
+}
+
+var (
+	blogContentDir      = filepath.Join("content", "blog")
+	inlineCodePattern   = regexp.MustCompile("`([^`]+)`")
+	inlineStrongPattern = regexp.MustCompile(`\*\*(.+?)\*\*`)
+	inlineEmPattern     = regexp.MustCompile(`\*(.+?)\*`)
+	inlineLinkPattern   = regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
+)
+
 func main() {
 	db, err := openDB()
 	if err != nil {
@@ -220,6 +238,8 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", handleIndex)
+	mux.HandleFunc("/blog", handleBlogIndex)
+	mux.HandleFunc("/blog/", handleBlogPost)
 	mux.HandleFunc("/api/register", handleRegister)
 	mux.HandleFunc("/api/login", handleLogin)
 	mux.HandleFunc("/api/logout", handleLogout)
@@ -360,6 +380,391 @@ func renderPrivacyHTML(page publicPage) string {
 	).Replace(privacyHTML)
 }
 
+func handleBlogIndex(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/blog" {
+		http.NotFound(w, r)
+		return
+	}
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	posts, err := loadBlogPosts()
+	if err != nil {
+		log.Printf("blog index load error: %v", err)
+		http.Error(w, "blog unavailable", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(renderBlogIndexHTML(posts)))
+}
+
+func handleBlogPost(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	slug := strings.Trim(strings.TrimPrefix(r.URL.Path, "/blog/"), "/")
+	if slug == "" || strings.Contains(slug, "/") || strings.Contains(slug, "..") {
+		http.NotFound(w, r)
+		return
+	}
+	post, err := loadBlogPost(slug)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			http.NotFound(w, r)
+			return
+		}
+		log.Printf("blog post load error: %v", err)
+		http.Error(w, "blog unavailable", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(renderBlogPostHTML(post)))
+}
+
+func loadBlogPosts() ([]blogPost, error) {
+	entries, err := os.ReadDir(blogContentDir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	posts := make([]blogPost, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+		slug := strings.TrimSuffix(entry.Name(), ".md")
+		post, err := loadBlogPost(slug)
+		if err != nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+	sort.Slice(posts, func(i, j int) bool {
+		if posts[i].dateValue.Equal(posts[j].dateValue) {
+			return posts[i].Slug < posts[j].Slug
+		}
+		return posts[i].dateValue.After(posts[j].dateValue)
+	})
+	return posts, nil
+}
+
+func loadBlogPost(slug string) (blogPost, error) {
+	if slug == "" || strings.Contains(slug, "/") || strings.Contains(slug, "..") {
+		return blogPost{}, os.ErrNotExist
+	}
+	raw, err := os.ReadFile(filepath.Join(blogContentDir, slug+".md"))
+	if err != nil {
+		return blogPost{}, err
+	}
+	post, err := parseBlogPost(slug, string(raw))
+	if err != nil {
+		return blogPost{}, fmt.Errorf("%s.md: %w", slug, err)
+	}
+	return post, nil
+}
+
+func parseBlogPost(slug, raw string) (blogPost, error) {
+	normalized := strings.ReplaceAll(raw, "\r\n", "\n")
+	if !strings.HasPrefix(normalized, "---\n") {
+		return blogPost{}, errors.New("missing frontmatter")
+	}
+	parts := strings.SplitN(strings.TrimPrefix(normalized, "---\n"), "\n---\n", 2)
+	if len(parts) != 2 {
+		return blogPost{}, errors.New("unterminated frontmatter")
+	}
+	meta := map[string]string{}
+	for _, line := range strings.Split(parts[0], "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		key, value, ok := strings.Cut(line, ":")
+		if !ok {
+			return blogPost{}, fmt.Errorf("invalid frontmatter line %q", line)
+		}
+		meta[strings.TrimSpace(key)] = strings.TrimSpace(value)
+	}
+	title := meta["title"]
+	date := meta["date"]
+	description := meta["description"]
+	if title == "" || date == "" || description == "" {
+		return blogPost{}, errors.New("frontmatter requires title, date and description")
+	}
+	dateValue, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return blogPost{}, fmt.Errorf("invalid date %q", date)
+	}
+	return blogPost{
+		Slug:        slug,
+		Title:       title,
+		Date:        date,
+		Description: description,
+		ContentHTML: renderMarkdownHTML(parts[1]),
+		dateValue:   dateValue,
+	}, nil
+}
+
+type markdownRenderState struct {
+	html    strings.Builder
+	inList  bool
+	listTag string
+	inQuote bool
+}
+
+func renderMarkdownHTML(markdown string) string {
+	lines := strings.Split(strings.ReplaceAll(markdown, "\r\n", "\n"), "\n")
+	state := markdownRenderState{}
+	inCode := false
+	code := strings.Builder{}
+	codeLang := ""
+	for index := 0; index < len(lines); index++ {
+		raw := lines[index]
+		line := strings.TrimSpace(raw)
+		if strings.HasPrefix(line, "```") {
+			if inCode {
+				state.html.WriteString(`<pre><code class="language-`)
+				state.html.WriteString(html.EscapeString(codeLang))
+				state.html.WriteString(`">`)
+				state.html.WriteString(html.EscapeString(strings.TrimSuffix(code.String(), "\n")))
+				state.html.WriteString(`</code></pre>`)
+				inCode = false
+				code.Reset()
+				codeLang = ""
+			} else {
+				closeMarkdownBlocks(&state)
+				inCode = true
+				codeLang = strings.TrimSpace(strings.TrimPrefix(line, "```"))
+			}
+			continue
+		}
+		if inCode {
+			code.WriteString(raw)
+			code.WriteByte('\n')
+			continue
+		}
+		if line == "" {
+			closeMarkdownBlocks(&state)
+			continue
+		}
+		if index+1 < len(lines) && strings.Contains(line, "|") && isMarkdownTableDivider(lines[index+1]) {
+			index = renderMarkdownTable(lines, index, &state)
+			continue
+		}
+		switch {
+		case line == "---" || line == "***":
+			closeMarkdownBlocks(&state)
+			state.html.WriteString("<hr>")
+		case strings.HasPrefix(line, "> "):
+			if state.inList {
+				state.html.WriteString("</" + state.listTag + ">")
+				state.inList = false
+				state.listTag = ""
+			}
+			if !state.inQuote {
+				state.html.WriteString("<blockquote>")
+				state.inQuote = true
+			}
+			state.html.WriteString("<p>" + inlineMarkdownHTML(strings.TrimSpace(strings.TrimPrefix(line, "> "))) + "</p>")
+		case strings.HasPrefix(line, "### "):
+			closeMarkdownBlocks(&state)
+			state.html.WriteString("<h3>" + inlineMarkdownHTML(line[4:]) + "</h3>")
+		case strings.HasPrefix(line, "## "):
+			closeMarkdownBlocks(&state)
+			state.html.WriteString("<h2>" + inlineMarkdownHTML(line[3:]) + "</h2>")
+		case strings.HasPrefix(line, "# "):
+			closeMarkdownBlocks(&state)
+			state.html.WriteString("<h1>" + inlineMarkdownHTML(line[2:]) + "</h1>")
+		case isUnorderedMarkdownItem(line):
+			addMarkdownListItem(&state, "ul", strings.TrimSpace(line[2:]))
+		case isOrderedMarkdownItem(line):
+			addMarkdownListItem(&state, "ol", strings.TrimSpace(line[strings.Index(line, ".")+1:]))
+		default:
+			closeMarkdownBlocks(&state)
+			state.html.WriteString("<p>" + inlineMarkdownHTML(line) + "</p>")
+		}
+	}
+	if inCode {
+		state.html.WriteString("<pre><code>" + html.EscapeString(strings.TrimSuffix(code.String(), "\n")) + "</code></pre>")
+	}
+	closeMarkdownBlocks(&state)
+	return state.html.String()
+}
+
+func closeMarkdownBlocks(state *markdownRenderState) {
+	if state.inList {
+		state.html.WriteString("</" + state.listTag + ">")
+		state.inList = false
+		state.listTag = ""
+	}
+	if state.inQuote {
+		state.html.WriteString("</blockquote>")
+		state.inQuote = false
+	}
+}
+
+func inlineMarkdownHTML(text string) string {
+	escaped := html.EscapeString(text)
+	escaped = inlineLinkPattern.ReplaceAllStringFunc(escaped, func(match string) string {
+		parts := inlineLinkPattern.FindStringSubmatch(match)
+		if len(parts) != 3 {
+			return match
+		}
+		href := sanitizeMarkdownHref(html.UnescapeString(parts[2]))
+		if href == "" {
+			return parts[1]
+		}
+		return `<a href="` + html.EscapeString(href) + `">` + parts[1] + `</a>`
+	})
+	escaped = inlineCodePattern.ReplaceAllString(escaped, "<code>$1</code>")
+	escaped = inlineStrongPattern.ReplaceAllString(escaped, "<strong>$1</strong>")
+	escaped = inlineEmPattern.ReplaceAllString(escaped, "<em>$1</em>")
+	return escaped
+}
+
+func sanitizeMarkdownHref(href string) string {
+	href = strings.TrimSpace(href)
+	if href == "" {
+		return ""
+	}
+	lower := strings.ToLower(href)
+	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") || strings.HasPrefix(lower, "mailto:") || strings.HasPrefix(href, "/") || strings.HasPrefix(href, "#") {
+		return href
+	}
+	return ""
+}
+
+func isUnorderedMarkdownItem(line string) bool {
+	return strings.HasPrefix(line, "- ") || strings.HasPrefix(line, "* ")
+}
+
+func isOrderedMarkdownItem(line string) bool {
+	dot := strings.Index(line, ".")
+	if dot <= 0 || dot+1 >= len(line) || line[dot+1] != ' ' {
+		return false
+	}
+	for _, ch := range line[:dot] {
+		if ch < '0' || ch > '9' {
+			return false
+		}
+	}
+	return true
+}
+
+func addMarkdownListItem(state *markdownRenderState, tag, value string) {
+	if state.inQuote {
+		state.html.WriteString("</blockquote>")
+		state.inQuote = false
+	}
+	if state.inList && state.listTag != tag {
+		state.html.WriteString("</" + state.listTag + ">")
+		state.inList = false
+		state.listTag = ""
+	}
+	if !state.inList {
+		state.html.WriteString("<" + tag + ">")
+		state.inList = true
+		state.listTag = tag
+	}
+	state.html.WriteString("<li>" + inlineMarkdownHTML(value) + "</li>")
+}
+
+func splitMarkdownTableRow(line string) []string {
+	value := strings.TrimSpace(line)
+	value = strings.TrimPrefix(value, "|")
+	value = strings.TrimSuffix(value, "|")
+	parts := strings.Split(value, "|")
+	for index := range parts {
+		parts[index] = strings.TrimSpace(parts[index])
+	}
+	return parts
+}
+
+func isMarkdownTableDivider(line string) bool {
+	cells := splitMarkdownTableRow(line)
+	if len(cells) == 0 {
+		return false
+	}
+	for _, cell := range cells {
+		cell = strings.Trim(cell, " :-")
+		if cell != "" {
+			return false
+		}
+	}
+	return true
+}
+
+func renderMarkdownTable(lines []string, start int, state *markdownRenderState) int {
+	headers := splitMarkdownTableRow(lines[start])
+	index := start + 2
+	var body strings.Builder
+	for index < len(lines) {
+		line := strings.TrimSpace(lines[index])
+		if line == "" || !strings.Contains(line, "|") || isMarkdownTableDivider(line) {
+			break
+		}
+		body.WriteString("<tr>")
+		for _, cell := range splitMarkdownTableRow(line) {
+			body.WriteString("<td>" + inlineMarkdownHTML(cell) + "</td>")
+		}
+		body.WriteString("</tr>")
+		index++
+	}
+	closeMarkdownBlocks(state)
+	state.html.WriteString(`<div class="table-wrap"><table><thead><tr>`)
+	for _, cell := range headers {
+		state.html.WriteString("<th>" + inlineMarkdownHTML(cell) + "</th>")
+	}
+	state.html.WriteString("</tr></thead><tbody>")
+	state.html.WriteString(body.String())
+	state.html.WriteString("</tbody></table></div>")
+	return index - 1
+}
+
+func renderBlogIndexHTML(posts []blogPost) string {
+	return strings.NewReplacer(
+		"__PAGE_TITLE__", "Blog | OnlineBox",
+		"__PAGE_DESCRIPTION__", "Updates and guides for OnlineBox browser tools.",
+		"__CANONICAL_URL__", html.EscapeString(siteURL()+"/blog"),
+		"__BLOG_CONTENT__", blogListHTML(posts),
+		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
+	).Replace(blogIndexHTML)
+}
+
+func blogListHTML(posts []blogPost) string {
+	if len(posts) == 0 {
+		return `<p class="empty">No blog posts yet.</p>`
+	}
+	items := make([]string, 0, len(posts))
+	for _, post := range posts {
+		items = append(items, fmt.Sprintf(
+			`<article class="post-card"><time datetime="%s">%s</time><h2><a href="/blog/%s">%s</a></h2><p>%s</p></article>`,
+			html.EscapeString(post.Date),
+			html.EscapeString(post.Date),
+			html.EscapeString(post.Slug),
+			html.EscapeString(post.Title),
+			html.EscapeString(post.Description),
+		))
+	}
+	return strings.Join(items, "")
+}
+
+func renderBlogPostHTML(post blogPost) string {
+	return strings.NewReplacer(
+		"__PAGE_TITLE__", html.EscapeString(post.Title+" | OnlineBox Blog"),
+		"__PAGE_DESCRIPTION__", html.EscapeString(post.Description),
+		"__CANONICAL_URL__", html.EscapeString(siteURL()+"/blog/"+post.Slug),
+		"__POST_TITLE__", html.EscapeString(post.Title),
+		"__POST_DATE__", html.EscapeString(post.Date),
+		"__POST_DESCRIPTION__", html.EscapeString(post.Description),
+		"__POST_CONTENT__", post.ContentHTML,
+		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
+	).Replace(blogPostHTML)
+}
+
 func qrScriptTag(page publicPage) string {
 	if page.PageUtility == "qr" {
 		return `<script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>`
@@ -428,7 +833,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(42px,7vw,78px);line-height:.98;
 <main class="wrap">
 <nav class="nav">
 <a class="brand" href="/">OnlineBox</a>
-<div class="nav-links"><a href="#image-tools">Image tools</a><a href="#data-tools">Data tools</a><a href="#creator-tools">Creator tools</a></div>
+<div class="nav-links"><a href="#image-tools">Image tools</a><a href="#data-tools">Data tools</a><a href="#creator-tools">Creator tools</a><a href="/blog">Blog</a></div>
 </nav>
 <section class="hero">
 <div>
@@ -1027,6 +1432,83 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(36px,7vw,62px);line-height:1.04
 </body>
 </html>`
 
+const blogIndexHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__PAGE_TITLE__</title>
+<meta name="description" content="__PAGE_DESCRIPTION__">
+<link rel="canonical" href="__CANONICAL_URL__">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+__GOOGLE_ANALYTICS__
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0e0e11;--surface:#18181d;--surface2:#202126;--border:rgba(255,255,255,.09);--accent:#d4ff57;--text:#f2f2f2;--muted:#9b9b9b}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:900px;margin:0 auto;padding:48px 22px 72px}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:46px}.brand{color:var(--accent);font-family:'Syne',sans-serif;font-weight:800;text-decoration:none}.home{color:var(--muted);font-size:13px;text-decoration:none;font-weight:800}
+.badge{display:inline-flex;color:var(--accent);background:rgba(212,255,87,.1);border:1px solid rgba(212,255,87,.24);border-radius:999px;padding:6px 11px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px}
+h1{font-family:'Syne',sans-serif;font-size:clamp(42px,8vw,72px);line-height:1.02;margin-bottom:14px}
+.intro{color:var(--muted);font-size:16px;line-height:1.7;max-width:620px;margin-bottom:30px}
+.post-list{display:grid;gap:14px}.post-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}.post-card time{display:block;color:var(--accent);font-size:12px;font-weight:800;margin-bottom:8px}.post-card h2{font-family:'Syne',sans-serif;font-size:24px;margin-bottom:9px}.post-card a{color:var(--text);text-decoration:none}.post-card a:hover{color:var(--accent)}.post-card p,.empty{color:var(--muted);line-height:1.65}.empty{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.site-footer{border-top:1px solid var(--border);margin-top:34px;padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.site-footer a{color:var(--text);text-decoration:none;font-weight:800}
+</style>
+</head>
+<body>
+<main class="wrap">
+<nav class="top"><a class="brand" href="/">OnlineBox</a><a class="home" href="/">All tools</a></nav>
+<div class="badge">OnlineBox notes</div>
+<h1>Blog</h1>
+<p class="intro">Short guides, updates and practical notes for free browser tools.</p>
+<section class="post-list">__BLOG_CONTENT__</section>
+<footer class="site-footer"><span>OnlineBox</span><a href="/privacy-policy">Privacy Policy</a></footer>
+</main>
+</body>
+</html>`
+
+const blogPostHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__PAGE_TITLE__</title>
+<meta name="description" content="__PAGE_DESCRIPTION__">
+<link rel="canonical" href="__CANONICAL_URL__">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+__GOOGLE_ANALYTICS__
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0e0e11;--surface:#18181d;--surface2:#202126;--border:rgba(255,255,255,.09);--accent:#d4ff57;--text:#f2f2f2;--muted:#9b9b9b}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:820px;margin:0 auto;padding:48px 22px 72px}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:44px}.brand{color:var(--accent);font-family:'Syne',sans-serif;font-weight:800;text-decoration:none}.home{color:var(--muted);font-size:13px;text-decoration:none;font-weight:800}
+.badge{display:inline-flex;color:var(--accent);background:rgba(212,255,87,.1);border:1px solid rgba(212,255,87,.24);border-radius:999px;padding:6px 11px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px}
+h1{font-family:'Syne',sans-serif;font-size:clamp(36px,7vw,64px);line-height:1.04;margin-bottom:12px}.date{color:var(--accent);font-size:13px;font-weight:800;margin-bottom:20px}.dek{color:var(--muted);font-size:17px;line-height:1.72;max-width:680px;margin-bottom:28px}
+.article{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;color:var(--muted);line-height:1.75}.article h1,.article h2,.article h3{font-family:'Syne',sans-serif;color:var(--text);line-height:1.2;margin:28px 0 10px}.article h1:first-child,.article h2:first-child,.article h3:first-child{margin-top:0}.article h1{font-size:32px}.article h2{font-size:26px}.article h3{font-size:21px}.article p{margin-bottom:14px}.article ul,.article ol{padding-left:22px;margin:10px 0 16px}.article li{margin-bottom:8px}.article blockquote{border-left:3px solid var(--accent);background:rgba(212,255,87,.08);margin:18px 0;padding:12px 15px;color:var(--text)}.article pre{background:#101114;border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;margin:16px 0}.article code{background:rgba(255,255,255,.08);border-radius:5px;padding:2px 5px;color:var(--text)}.article pre code{background:transparent;padding:0}.article hr{border:0;border-top:1px solid var(--border);margin:22px 0}.article a{color:var(--accent);font-weight:800;text-decoration:none}.table-wrap{overflow:auto;margin:16px 0}.article table{width:100%;border-collapse:collapse;min-width:520px}.article th,.article td{border:1px solid var(--border);padding:9px 10px;text-align:left}.article th{color:var(--text);background:rgba(255,255,255,.05)}
+.more-tools{border-top:1px solid var(--border);margin-top:24px;padding-top:18px;color:var(--muted);font-weight:800}.more-tools a{color:var(--accent);text-decoration:none}
+.site-footer{border-top:1px solid var(--border);margin-top:34px;padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.site-footer a{color:var(--text);text-decoration:none;font-weight:800}
+@media(max-width:620px){.article{padding:18px}.article table{min-width:460px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<nav class="top"><a class="brand" href="/">OnlineBox</a><a class="home" href="/blog">Blog</a></nav>
+<div class="badge">OnlineBox Blog</div>
+<article>
+<h1>__POST_TITLE__</h1>
+<div class="date">__POST_DATE__</div>
+<p class="dek">__POST_DESCRIPTION__</p>
+<section class="article">__POST_CONTENT__</section>
+<p class="more-tools">More free browser tools &rarr; <a href="/">onlinebox.site</a></p>
+</article>
+<footer class="site-footer"><span>OnlineBox</span><a href="/privacy-policy">Privacy Policy</a></footer>
+</main>
+</body>
+</html>`
+
 func jsString(value string) string {
 	encoded, err := json.Marshal(value)
 	if err != nil {
@@ -1090,7 +1572,11 @@ func handleSitemap(w http.ResponseWriter, r *http.Request) {
 }
 
 func sitemapURLs() []sitemapURL {
-	urls := make([]sitemapURL, 0, len(publicPages))
+	posts, err := loadBlogPosts()
+	if err != nil {
+		log.Printf("sitemap blog load error: %v", err)
+	}
+	urls := make([]sitemapURL, 0, len(publicPages)+1+len(posts))
 	lastMod := time.Now().UTC().Format("2006-01-02")
 	for _, page := range publicPages {
 		priority := "0.8"
@@ -1102,6 +1588,20 @@ func sitemapURLs() []sitemapURL {
 			LastMod:    lastMod,
 			ChangeFreq: "weekly",
 			Priority:   priority,
+		})
+	}
+	urls = append(urls, sitemapURL{
+		Loc:        siteURL() + "/blog",
+		LastMod:    lastMod,
+		ChangeFreq: "weekly",
+		Priority:   "0.7",
+	})
+	for _, post := range posts {
+		urls = append(urls, sitemapURL{
+			Loc:        siteURL() + "/blog/" + post.Slug,
+			LastMod:    post.Date,
+			ChangeFreq: "monthly",
+			Priority:   "0.6",
 		})
 	}
 	return urls

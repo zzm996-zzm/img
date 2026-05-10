@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -32,6 +33,24 @@ func setupTestDB(t *testing.T) *sql.DB {
 		appDB = oldDB
 	})
 	return db
+}
+
+func setupBlogContent(t *testing.T, files map[string]string) {
+	t.Helper()
+	oldDir := blogContentDir
+	dir := filepath.Join(t.TempDir(), "content", "blog")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("create blog content dir: %v", err)
+	}
+	for name, body := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0644); err != nil {
+			t.Fatalf("write blog post %s: %v", name, err)
+		}
+	}
+	blogContentDir = dir
+	t.Cleanup(func() {
+		blogContentDir = oldDir
+	})
 }
 
 func TestHandlePayPalWebhookStoresEmail(t *testing.T) {
@@ -163,6 +182,22 @@ func TestRefundRevokesPaidLicense(t *testing.T) {
 
 func TestHandleSitemap(t *testing.T) {
 	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	setupBlogContent(t, map[string]string{
+		"older.md": `---
+title: Older Post
+date: 2026-05-01
+description: Older description
+---
+
+Older content.`,
+		"day-one.md": `---
+title: Day One
+date: 2026-05-10
+description: First blog entry
+---
+
+Hello.`,
+	})
 	req := httptest.NewRequest(http.MethodGet, "/sitemap.xml", nil)
 	rr := httptest.NewRecorder()
 
@@ -178,8 +213,8 @@ func TestHandleSitemap(t *testing.T) {
 	if err := xml.Unmarshal(rr.Body.Bytes(), &parsed); err != nil {
 		t.Fatalf("decode sitemap: %v body=%s", err, rr.Body.String())
 	}
-	if len(parsed.URLs) != len(publicPages) {
-		t.Fatalf("expected %d sitemap urls, got %d: %#v", len(publicPages), len(parsed.URLs), parsed.URLs)
+	if len(parsed.URLs) != len(publicPages)+3 {
+		t.Fatalf("expected %d sitemap urls, got %d: %#v", len(publicPages)+3, len(parsed.URLs), parsed.URLs)
 	}
 	if parsed.URLs[0].Loc != "https://onlinebox.site/" {
 		t.Fatalf("unexpected sitemap urls: %#v", parsed.URLs)
@@ -188,6 +223,8 @@ func TestHandleSitemap(t *testing.T) {
 	var foundPrivacy bool
 	var foundM3U8 bool
 	var foundJSON bool
+	var foundBlog bool
+	var foundBlogPost bool
 	for _, item := range parsed.URLs {
 		if item.Loc == "https://onlinebox.site/image-compressor" {
 			foundCompressor = true
@@ -201,6 +238,12 @@ func TestHandleSitemap(t *testing.T) {
 		if item.Loc == "https://onlinebox.site/json-formatter" {
 			foundJSON = true
 		}
+		if item.Loc == "https://onlinebox.site/blog" {
+			foundBlog = true
+		}
+		if item.Loc == "https://onlinebox.site/blog/day-one" {
+			foundBlogPost = true
+		}
 	}
 	if !foundCompressor {
 		t.Fatalf("expected image compressor URL in sitemap: %#v", parsed.URLs)
@@ -213,6 +256,12 @@ func TestHandleSitemap(t *testing.T) {
 	}
 	if !foundJSON {
 		t.Fatalf("expected JSON formatter URL in sitemap: %#v", parsed.URLs)
+	}
+	if !foundBlog {
+		t.Fatalf("expected blog URL in sitemap: %#v", parsed.URLs)
+	}
+	if !foundBlogPost {
+		t.Fatalf("expected blog post URL in sitemap: %#v", parsed.URLs)
 	}
 }
 
@@ -494,6 +543,7 @@ func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 		`href="/json-formatter"`,
 		`href="/image-compressor"`,
 		`href="/m3u8-player"`,
+		`href="/blog"`,
 		`href="/privacy-policy"`,
 	} {
 		if !strings.Contains(body, expected) {
@@ -507,6 +557,98 @@ func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 	} {
 		if strings.Contains(body, unexpected) {
 			t.Fatalf("expected directory home to omit %q", unexpected)
+		}
+	}
+}
+
+func TestHandleBlogIndexRendersMarkdownPostsByDate(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	setupBlogContent(t, map[string]string{
+		"older.md": `---
+title: Older Post
+date: 2026-05-01
+description: Older description
+---
+
+Older content.`,
+		"day-one.md": `---
+title: Day One
+date: 2026-05-10
+description: First blog entry
+---
+
+Hello.`,
+	})
+	req := httptest.NewRequest(http.MethodGet, "/blog", nil)
+	rr := httptest.NewRecorder()
+
+	handleBlogIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>Blog | OnlineBox</title>",
+		`<link rel="canonical" href="https://onlinebox.site/blog">`,
+		"<h1>Blog</h1>",
+		`href="/blog/day-one"`,
+		"First blog entry",
+		"Older description",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected blog index to contain %q", expected)
+		}
+	}
+	if strings.Index(body, "Day One") > strings.Index(body, "Older Post") {
+		t.Fatalf("expected newest post first: %s", body)
+	}
+}
+
+func TestHandleBlogPostRendersMarkdownAndSEO(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	setupBlogContent(t, map[string]string{
+		"day-one.md": `---
+title: Day One
+date: 2026-05-10
+description: First blog entry
+---
+
+## Start
+
+This is **bold** and [linked](/json-formatter).
+
+- Local rendering
+- Dark theme
+
+` + "```go" + `
+fmt.Println("safe")
+` + "```" + `
+`,
+	})
+	req := httptest.NewRequest(http.MethodGet, "/blog/day-one", nil)
+	rr := httptest.NewRecorder()
+
+	handleBlogPost(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>Day One | OnlineBox Blog</title>",
+		`<meta name="description" content="First blog entry">`,
+		`<link rel="canonical" href="https://onlinebox.site/blog/day-one">`,
+		"<h1>Day One</h1>",
+		`<div class="date">2026-05-10</div>`,
+		"<h2>Start</h2>",
+		"This is <strong>bold</strong> and <a href=\"/json-formatter\">linked</a>.",
+		"<li>Local rendering</li>",
+		`<pre><code class="language-go">fmt.Println(&#34;safe&#34;)</code></pre>`,
+		`More free browser tools &rarr; <a href="/">onlinebox.site</a>`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected blog post to contain %q", expected)
 		}
 	}
 }
