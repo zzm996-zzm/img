@@ -612,7 +612,15 @@ func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 		`href="/json-formatter"`,
 		`href="/image-compressor"`,
 		`href="/m3u8-player"`,
+		`<meta property="og:title" content="OnlineBox | Free Browser Tools for Images, Data and Creators">`,
+		`<meta property="og:type" content="website">`,
+		`<script type="application/ld+json">`,
+		`"@type":"WebSite"`,
+		`"@type":"Organization"`,
 		`href="/blog"`,
+		`href="/about"`,
+		`href="/contact"`,
+		`href="/terms"`,
 		`href="/privacy-policy"`,
 	} {
 		if !strings.Contains(body, expected) {
@@ -626,6 +634,70 @@ func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 	} {
 		if strings.Contains(body, unexpected) {
 			t.Fatalf("expected directory home to omit %q", unexpected)
+		}
+	}
+}
+
+func TestHandleIndexRendersSEOMetadataForToolPage(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/json-formatter", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		`<meta property="og:title" content="JSON Formatter &amp; Validator | Free Online JSON Beautifier - OnlineBox">`,
+		`<meta property="og:type" content="website">`,
+		`<script type="application/ld+json">`,
+		`"@type":"WebApplication"`,
+		`"applicationCategory":"DeveloperApplication"`,
+		`"@type":"BreadcrumbList"`,
+		`"name":"Free browser tools"`,
+		`"name":"JSON Formatter \u0026 Validator"`,
+		`Everything runs locally in your browser for the core formatting workflow`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected JSON formatter page to contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{
+		`twitter:site`,
+	} {
+		if strings.Contains(body, unexpected) {
+			t.Fatalf("expected JSON formatter page to omit %q", unexpected)
+		}
+	}
+}
+
+func TestHandleIndexRendersTrustPages(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	for _, path := range []string{"/about", "/contact", "/terms"} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		rr := httptest.NewRecorder()
+
+		handleIndex(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("%s: expected status 200, got %d body=%s", path, rr.Code, rr.Body.String())
+		}
+		body := rr.Body.String()
+		for _, expected := range []string{
+			`<html lang="en">`,
+			`<meta property="og:title"`,
+			`<script type="application/ld+json">`,
+			`"@type":"WebPage"`,
+			`href="/about"`,
+			`href="/contact"`,
+			`href="/terms"`,
+			`href="/privacy-policy"`,
+		} {
+			if !strings.Contains(body, expected) {
+				t.Fatalf("%s: expected trust page to contain %q", path, expected)
+			}
 		}
 	}
 }

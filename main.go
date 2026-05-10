@@ -227,6 +227,33 @@ var publicPages = []publicPage{
 		Intro:       "This policy explains what information OnlineBox collects, how browser-based tools process files, and how analytics and advertising services may use cookies.",
 		Kind:        "legal",
 	},
+	{
+		Path:        "/about",
+		Title:       "About OnlineBox | Free Browser Tools",
+		Description: "Learn about OnlineBox, a collection of free browser-based tools for images, data formatting, QR codes, Markdown, video streams and creator workflows.",
+		Heading:     "About OnlineBox",
+		Accent:      "free browser tools with local processing",
+		Intro:       "OnlineBox is built around small, focused tools that help people finish everyday image, data and creator tasks directly in the browser.",
+		Kind:        "trust",
+	},
+	{
+		Path:        "/contact",
+		Title:       "Contact OnlineBox | Feedback and Tool Requests",
+		Description: "Contact OnlineBox for feedback, bug reports, tool requests, privacy questions and browser tool support.",
+		Heading:     "Contact OnlineBox",
+		Accent:      "feedback, bugs and tool requests",
+		Intro:       "Use this page to find the best way to send feedback, report a broken tool, request a new utility or ask a privacy-related question.",
+		Kind:        "trust",
+	},
+	{
+		Path:        "/terms",
+		Title:       "Terms of Use | OnlineBox",
+		Description: "Terms of Use for OnlineBox free browser tools, including acceptable use, local processing, third-party services and service availability.",
+		Heading:     "Terms of Use",
+		Accent:      "rules for using OnlineBox",
+		Intro:       "These terms explain the basic rules for using OnlineBox browser tools and the limits of the service.",
+		Kind:        "trust",
+	},
 }
 
 var publicPageByPath = map[string]publicPage{}
@@ -317,6 +344,9 @@ func renderIndexHTML(page publicPage) string {
 	if page.Kind == "legal" {
 		return renderPrivacyHTML(page)
 	}
+	if page.Kind == "trust" {
+		return renderTrustHTML(page)
+	}
 	if page.Path != "/" {
 		return renderLandingHTML(page)
 	}
@@ -331,6 +361,8 @@ func renderHomeHTML(page publicPage) string {
 		"__PAGE_HEADING__", html.EscapeString(page.Heading),
 		"__PAGE_ACCENT__", html.EscapeString(page.Accent),
 		"__PAGE_INTRO__", html.EscapeString(page.Intro),
+		"__SEO_META__", seoMetaTags(page.Title, page.Description, siteURL()+"/", "website"),
+		"__JSON_LD__", schemaScript(homeSchema()),
 		"__IMAGE_TOOL_LINKS__", homeToolCardsHTML("image"),
 		"__UTILITY_TOOL_LINKS__", homeToolCardsHTML("utility"),
 		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
@@ -367,6 +399,150 @@ func toolLabel(page publicPage) string {
 	return "Creator"
 }
 
+func seoMetaTags(title, description, canonical, ogType string) string {
+	return fmt.Sprintf(`<meta property="og:title" content="%s">
+<meta property="og:description" content="%s">
+<meta property="og:url" content="%s">
+<meta property="og:type" content="%s">
+<meta property="og:site_name" content="OnlineBox">`,
+		html.EscapeString(title),
+		html.EscapeString(description),
+		html.EscapeString(canonical),
+		html.EscapeString(ogType),
+	)
+}
+
+func schemaScript(items []map[string]any) string {
+	payload := map[string]any{
+		"@context": "https://schema.org",
+		"@graph":   items,
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return ""
+	}
+	return `<script type="application/ld+json">` + string(encoded) + `</script>`
+}
+
+func homeSchema() []map[string]any {
+	base := siteURL()
+	return []map[string]any{
+		{
+			"@type":       "WebSite",
+			"@id":         base + "/#website",
+			"url":         base + "/",
+			"name":        "OnlineBox",
+			"description": publicPageByPath["/"].Description,
+			"inLanguage":  "en",
+		},
+		{
+			"@type":       "Organization",
+			"@id":         base + "/#organization",
+			"name":        "OnlineBox",
+			"url":         base + "/",
+			"description": "Free browser-based tools for images, data and creator workflows.",
+		},
+	}
+}
+
+func toolPageSchema(page publicPage, canonical string) []map[string]any {
+	return []map[string]any{
+		{
+			"@type":               "WebApplication",
+			"@id":                 canonical + "#app",
+			"name":                page.Heading,
+			"url":                 canonical,
+			"description":         page.Description,
+			"applicationCategory": applicationCategory(page),
+			"operatingSystem":     "Any",
+			"isAccessibleForFree": true,
+			"inLanguage":          "en",
+			"publisher": map[string]any{
+				"@type": "Organization",
+				"name":  "OnlineBox",
+				"url":   siteURL() + "/",
+			},
+		},
+		breadcrumbSchema(canonical, page.Heading),
+	}
+}
+
+func webPageSchema(page publicPage, canonical string) []map[string]any {
+	return []map[string]any{
+		{
+			"@type":       "WebPage",
+			"@id":         canonical + "#webpage",
+			"name":        page.Title,
+			"url":         canonical,
+			"description": page.Description,
+			"inLanguage":  "en",
+			"isPartOf": map[string]any{
+				"@type": "WebSite",
+				"name":  "OnlineBox",
+				"url":   siteURL() + "/",
+			},
+		},
+		breadcrumbSchema(canonical, page.Heading),
+	}
+}
+
+func blogPostSchema(post blogPost) []map[string]any {
+	canonical := siteURL() + "/blog/" + post.Slug
+	return []map[string]any{
+		{
+			"@type":         "BlogPosting",
+			"@id":           canonical + "#blogposting",
+			"headline":      post.Title,
+			"description":   post.Description,
+			"url":           canonical,
+			"datePublished": post.Date,
+			"dateModified":  post.Date,
+			"inLanguage":    "en",
+			"author": map[string]any{
+				"@type": "Organization",
+				"name":  "OnlineBox",
+				"url":   siteURL() + "/",
+			},
+			"publisher": map[string]any{
+				"@type": "Organization",
+				"name":  "OnlineBox",
+				"url":   siteURL() + "/",
+			},
+		},
+		breadcrumbSchema(canonical, post.Title),
+	}
+}
+
+func breadcrumbSchema(canonical, currentName string) map[string]any {
+	return map[string]any{
+		"@type": "BreadcrumbList",
+		"itemListElement": []map[string]any{
+			{
+				"@type":    "ListItem",
+				"position": 1,
+				"name":     "Free browser tools",
+				"item":     siteURL() + "/",
+			},
+			{
+				"@type":    "ListItem",
+				"position": 2,
+				"name":     currentName,
+				"item":     canonical,
+			},
+		},
+	}
+}
+
+func applicationCategory(page publicPage) string {
+	if page.Kind == "image" {
+		return "MultimediaApplication"
+	}
+	if page.PageUtility == "csv" || page.PageUtility == "json" || page.PageUtility == "markdown" {
+		return "DeveloperApplication"
+	}
+	return "UtilitiesApplication"
+}
+
 func renderLandingHTML(page publicPage) string {
 	canonical := siteURL() + page.Path
 	if page.Path == "/" {
@@ -379,6 +555,8 @@ func renderLandingHTML(page publicPage) string {
 		"__PAGE_HEADING__", html.EscapeString(page.Heading),
 		"__PAGE_ACCENT__", html.EscapeString(page.Accent),
 		"__PAGE_INTRO__", html.EscapeString(page.Intro),
+		"__SEO_META__", seoMetaTags(page.Title, page.Description, canonical, "website"),
+		"__JSON_LD__", schemaScript(toolPageSchema(page, canonical)),
 		"__PRIMARY_TOOL__", landingToolHTML(page),
 		"__GUIDE_CONTENT__", landingGuideHTML(page),
 		"__RELATED_LINKS__", relatedLinksHTML(page),
@@ -397,8 +575,26 @@ func renderPrivacyHTML(page publicPage) string {
 		"__PAGE_HEADING__", html.EscapeString(page.Heading),
 		"__PAGE_ACCENT__", html.EscapeString(page.Accent),
 		"__PAGE_INTRO__", html.EscapeString(page.Intro),
+		"__SEO_META__", seoMetaTags(page.Title, page.Description, siteURL()+page.Path, "website"),
+		"__JSON_LD__", schemaScript(webPageSchema(page, siteURL()+page.Path)),
 		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
 	).Replace(privacyHTML)
+}
+
+func renderTrustHTML(page publicPage) string {
+	canonical := siteURL() + page.Path
+	return strings.NewReplacer(
+		"__PAGE_TITLE__", html.EscapeString(page.Title),
+		"__PAGE_DESCRIPTION__", html.EscapeString(page.Description),
+		"__CANONICAL_URL__", html.EscapeString(canonical),
+		"__PAGE_HEADING__", html.EscapeString(page.Heading),
+		"__PAGE_ACCENT__", html.EscapeString(page.Accent),
+		"__PAGE_INTRO__", html.EscapeString(page.Intro),
+		"__SEO_META__", seoMetaTags(page.Title, page.Description, canonical, "website"),
+		"__JSON_LD__", schemaScript(webPageSchema(page, canonical)),
+		"__TRUST_CONTENT__", trustContentHTML(page.Path),
+		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
+	).Replace(trustHTML)
 }
 
 func handleBlogIndex(w http.ResponseWriter, r *http.Request) {
@@ -746,10 +942,24 @@ func renderMarkdownTable(lines []string, start int, state *markdownRenderState) 
 }
 
 func renderBlogIndexHTML(posts []blogPost) string {
+	canonical := siteURL() + "/blog"
+	title := "Blog | OnlineBox"
+	description := "Updates and guides for OnlineBox browser tools."
 	return strings.NewReplacer(
-		"__PAGE_TITLE__", "Blog | OnlineBox",
-		"__PAGE_DESCRIPTION__", "Updates and guides for OnlineBox browser tools.",
-		"__CANONICAL_URL__", html.EscapeString(siteURL()+"/blog"),
+		"__PAGE_TITLE__", title,
+		"__PAGE_DESCRIPTION__", description,
+		"__CANONICAL_URL__", html.EscapeString(canonical),
+		"__SEO_META__", seoMetaTags(title, description, canonical, "blog"),
+		"__JSON_LD__", schemaScript([]map[string]any{
+			{
+				"@type":       "Blog",
+				"name":        "OnlineBox Blog",
+				"url":         canonical,
+				"description": description,
+				"inLanguage":  "en",
+			},
+			breadcrumbSchema(canonical, "Blog"),
+		}),
 		"__BLOG_CONTENT__", blogListHTML(posts),
 		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
 	).Replace(blogIndexHTML)
@@ -774,10 +984,14 @@ func blogListHTML(posts []blogPost) string {
 }
 
 func renderBlogPostHTML(post blogPost) string {
+	canonical := siteURL() + "/blog/" + post.Slug
+	title := post.Title + " | OnlineBox Blog"
 	return strings.NewReplacer(
-		"__PAGE_TITLE__", html.EscapeString(post.Title+" | OnlineBox Blog"),
+		"__PAGE_TITLE__", html.EscapeString(title),
 		"__PAGE_DESCRIPTION__", html.EscapeString(post.Description),
-		"__CANONICAL_URL__", html.EscapeString(siteURL()+"/blog/"+post.Slug),
+		"__CANONICAL_URL__", html.EscapeString(canonical),
+		"__SEO_META__", seoMetaTags(title, post.Description, canonical, "article"),
+		"__JSON_LD__", schemaScript(blogPostSchema(post)),
 		"__POST_TITLE__", html.EscapeString(post.Title),
 		"__POST_DATE__", html.EscapeString(post.Date),
 		"__POST_DESCRIPTION__", html.EscapeString(post.Description),
@@ -837,11 +1051,13 @@ const homeHTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>__PAGE_TITLE__</title>
 <meta name="description" content="__PAGE_DESCRIPTION__">
+__SEO_META__
 <link rel="canonical" href="__CANONICAL_URL__">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 __GOOGLE_ANALYTICS__
+__JSON_LD__
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#101113;--panel:#18191d;--panel2:#202126;--line:rgba(255,255,255,.09);--text:#f4f1e8;--muted:#9b988e;--accent:#d4ff57}
@@ -909,7 +1125,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(42px,7vw,78px);line-height:.98;
 <details><summary>Why are tools on separate pages?</summary><p>Separate pages are better for users and search engines because each page can focus on one task, one title and one set of instructions.</p></details>
 </div>
 </section>
-<footer class="site-footer"><span>OnlineBox</span><a href="/privacy-policy">Privacy Policy</a></footer>
+<footer class="site-footer"><span>OnlineBox</span><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
 </body>
 </html>`
@@ -1128,7 +1344,7 @@ func landingGuideHTML(page publicPage) string {
 <li>Use Copy result when the output is ready, or Clear to reset both panels.</li>
 </ol>
 <h2>Best use cases for JSON formatting</h2>
-<p>This tool is useful for reading API responses, checking configuration files, cleaning webhook payloads, preparing mock data, debugging front-end state and sharing compact JSON snippets. Everything runs in your browser, so pasted JSON is not uploaded for formatting.</p>
+<p>This tool is useful for reading API responses, checking configuration files, cleaning webhook payloads, preparing mock data, debugging front-end state and sharing compact JSON snippets. Everything runs locally in your browser for the core formatting workflow, so pasted JSON is not uploaded for formatting.</p>
 <h2>What the validator checks</h2>
 <p>The validator uses the browser JSON parser and reports syntax problems such as trailing commas, missing quotes, unclosed objects, invalid escape sequences and unexpected tokens. When the browser exposes a character position, the error message includes the line and column.</p>
 <section class="faq-block">
@@ -1189,7 +1405,7 @@ func imageGuideHTML(name, how, scenario string) string {
 <h2>How to use the %s</h2>
 <ol><li>%s</li><li>After processing, check whether the output file size, format or dimensions match your target platform.</li><li>If the result is not right, adjust the settings and process the image again.</li></ol>
 <h2>When is the %s useful?</h2>
-<p>%s Processing runs in your browser, so the image does not need to be uploaded to a server for the core operation.</p>
+<p>%s Everything runs locally in your browser for the core image workflow, so the image does not need to be uploaded to a server for the core operation.</p>
 <section class="faq-block">
 <h2>FAQ</h2>
 <details open><summary>Does the image upload to a server?</summary><p>No. The current tool uses browser features to process the image locally. The server mainly delivers the page.</p></details>
@@ -1204,7 +1420,7 @@ func utilityGuideHTML(name, how, scenario string) string {
 <h2>How to use the %s</h2>
 <p>%s</p>
 <h2>When is the %s useful?</h2>
-<p>%s This tool is designed for quick, lightweight browser-based tasks.</p>
+<p>%s Everything runs locally in your browser for the core workflow. This tool is designed for quick, lightweight browser-based tasks.</p>
 <section class="faq-block">
 <h2>FAQ</h2>
 <details open><summary>Is this tool free?</summary><p>Yes, the basic tool is available for free. Future batch workflows, templates or high-resolution exports may become Pro features.</p></details>
@@ -1357,6 +1573,42 @@ async function compressBatchImages(){if(!batchFiles.length){setBatchStatus('Choo
 setupBatchDrop();`
 }
 
+func trustContentHTML(path string) string {
+	switch path {
+	case "/about":
+		return `<h2>What OnlineBox does</h2>
+<p>OnlineBox collects practical browser tools for everyday image, data and creator work. The goal is simple: open a page, complete one task, download or copy the result, and move on.</p>
+<h2>Why local browser processing matters</h2>
+<p>Many OnlineBox tools use browser APIs for the core operation, including image compression, image conversion, resizing, JSON formatting, CSV conversion and Markdown preview. That keeps small tasks fast and reduces unnecessary file uploads.</p>
+<h2>Who it is for</h2>
+<p>The tools are built for developers, operators, creators, students, small business owners and anyone who needs a lightweight utility without installing software.</p>
+<h2>Editorial approach</h2>
+<p>Each tool page focuses on one job, explains the expected input and output, and links to related tools when another workflow is a better fit.</p>`
+	case "/contact":
+		return `<h2>Feedback and bug reports</h2>
+<p>If a tool does not behave as expected, include the page URL, browser name, operating system, what you tried to do and what happened. Do not send sensitive files or private data when reporting a problem.</p>
+<h2>Tool requests</h2>
+<p>OnlineBox is focused on small browser-first utilities. Good requests usually describe the input, the output and the situation where the tool would save time.</p>
+<h2>Privacy questions</h2>
+<p>For questions about local processing, analytics, advertising or cookies, start with the Privacy Policy and include the specific page or feature you are asking about.</p>
+<h2>Contact channel</h2>
+<p>Email: <a href="mailto:hello@onlinebox.site">hello@onlinebox.site</a></p>`
+	case "/terms":
+		return `<h2>Using the tools</h2>
+<p>OnlineBox provides browser-based utilities for general productivity tasks. You are responsible for checking that each output is suitable for your use case before submitting it to another service, publishing it or relying on it.</p>
+<h2>Acceptable use</h2>
+<p>Do not use OnlineBox to attack, overload, reverse engineer or interfere with the service. Do not use the tools to process content that you do not have the right to use.</p>
+<h2>Local processing and third parties</h2>
+<p>Many tools run locally in your browser, but pages may still load third-party libraries, analytics, fonts or advertising scripts. See the Privacy Policy for more detail.</p>
+<h2>No professional advice</h2>
+<p>OnlineBox is a utility site. It does not provide legal, financial, medical or professional advice.</p>
+<h2>Availability</h2>
+<p>The site may change, add or remove tools at any time. Free tools are provided as available and may have browser-specific limitations.</p>`
+	default:
+		return `<p>OnlineBox provides free browser tools for images, data and creators.</p>`
+	}
+}
+
 const landingHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1364,11 +1616,13 @@ const landingHTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>__PAGE_TITLE__</title>
 <meta name="description" content="__PAGE_DESCRIPTION__">
+__SEO_META__
 <link rel="canonical" href="__CANONICAL_URL__">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 __GOOGLE_ANALYTICS__
+__JSON_LD__
 __QR_SCRIPT__
 __MARKDOWN_CSS__
 <style>
@@ -1438,7 +1692,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 __PRIMARY_TOOL__
 __GUIDE_CONTENT__
 <section class="related" aria-label="Related tools">__RELATED_LINKS__</section>
-<footer class="site-footer"><span>OnlineBox</span><a href="/privacy-policy">Privacy Policy</a></footer>
+<footer class="site-footer"><span>OnlineBox</span><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
 <script>
 __LANDING_SCRIPT__
@@ -1453,11 +1707,13 @@ const privacyHTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>__PAGE_TITLE__</title>
 <meta name="description" content="__PAGE_DESCRIPTION__">
+__SEO_META__
 <link rel="canonical" href="__CANONICAL_URL__">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 __GOOGLE_ANALYTICS__
+__JSON_LD__
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0e0e11;--surface:#18181d;--border:rgba(255,255,255,.09);--accent:#d4ff57;--text:#f2f2f2;--muted:#9b9b9b}
@@ -1502,7 +1758,47 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(36px,7vw,62px);line-height:1.04
 <h2>Changes to This Policy</h2>
 <p>We may update this Privacy Policy when tools, analytics, advertising or legal requirements change. The updated version will be posted on this page.</p>
 </section>
-<footer class="site-footer"><span>OnlineBox</span><a href="/privacy-policy">Privacy Policy</a></footer>
+<footer class="site-footer"><span>OnlineBox</span><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy-policy">Privacy Policy</a></footer>
+</main>
+</body>
+</html>`
+
+const trustHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>__PAGE_TITLE__</title>
+<meta name="description" content="__PAGE_DESCRIPTION__">
+__SEO_META__
+<link rel="canonical" href="__CANONICAL_URL__">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="shortcut icon" href="/favicon.ico">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+__GOOGLE_ANALYTICS__
+__JSON_LD__
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0e0e11;--surface:#18181d;--border:rgba(255,255,255,.09);--accent:#d4ff57;--text:#f2f2f2;--muted:#9b9b9b}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none}
+.wrap{position:relative;z-index:1;max-width:820px;margin:0 auto;padding:48px 22px 72px}
+.top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:44px}.brand{color:var(--accent);font-family:'Syne',sans-serif;font-weight:800;text-decoration:none}.home{color:var(--muted);font-size:13px;text-decoration:none}
+.badge{display:inline-flex;color:var(--accent);background:rgba(212,255,87,.1);border:1px solid rgba(212,255,87,.24);border-radius:999px;padding:6px 11px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:18px}
+h1{font-family:'Syne',sans-serif;font-size:clamp(36px,7vw,62px);line-height:1.04;margin-bottom:16px}h1 em{display:block;color:var(--accent);font-style:normal}
+.intro{color:var(--muted);font-size:16px;line-height:1.7;max-width:680px;margin-bottom:28px}
+.content{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;color:var(--muted);line-height:1.75}.content h2{font-family:'Syne',sans-serif;color:var(--text);font-size:23px;margin:24px 0 8px}.content h2:first-child{margin-top:0}.content p{margin-bottom:12px}.content a{color:var(--accent);font-weight:800;text-decoration:none}
+.site-footer{border-top:1px solid var(--border);margin-top:34px;padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.site-footer a{color:var(--text);text-decoration:none;font-weight:800}
+</style>
+</head>
+<body>
+<main class="wrap">
+<nav class="top"><a class="brand" href="/">OnlineBox</a><a class="home" href="/">All tools</a></nav>
+<div class="badge">OnlineBox</div>
+<h1>__PAGE_HEADING__<em>__PAGE_ACCENT__</em></h1>
+<p class="intro">__PAGE_INTRO__</p>
+<section class="content">__TRUST_CONTENT__</section>
+<footer class="site-footer"><span>OnlineBox</span><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
 </body>
 </html>`
@@ -1514,11 +1810,13 @@ const blogIndexHTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>__PAGE_TITLE__</title>
 <meta name="description" content="__PAGE_DESCRIPTION__">
+__SEO_META__
 <link rel="canonical" href="__CANONICAL_URL__">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 __GOOGLE_ANALYTICS__
+__JSON_LD__
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0e0e11;--surface:#18181d;--surface2:#202126;--border:rgba(255,255,255,.09);--accent:#d4ff57;--text:#f2f2f2;--muted:#9b9b9b}
@@ -1540,7 +1838,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(42px,8vw,72px);line-height:1.02
 <h1>Blog</h1>
 <p class="intro">Short guides, updates and practical notes for free browser tools.</p>
 <section class="post-list">__BLOG_CONTENT__</section>
-<footer class="site-footer"><span>OnlineBox</span><a href="/privacy-policy">Privacy Policy</a></footer>
+<footer class="site-footer"><span>OnlineBox</span><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
 </body>
 </html>`
@@ -1552,11 +1850,13 @@ const blogPostHTML = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>__PAGE_TITLE__</title>
 <meta name="description" content="__PAGE_DESCRIPTION__">
+__SEO_META__
 <link rel="canonical" href="__CANONICAL_URL__">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 __GOOGLE_ANALYTICS__
+__JSON_LD__
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0e0e11;--surface:#18181d;--surface2:#202126;--border:rgba(255,255,255,.09);--accent:#d4ff57;--text:#f2f2f2;--muted:#9b9b9b}
@@ -1583,7 +1883,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(36px,7vw,64px);line-height:1.04
 <section class="article">__POST_CONTENT__</section>
 <p class="more-tools">More free browser tools &rarr; <a href="/">onlinebox.site</a></p>
 </article>
-<footer class="site-footer"><span>OnlineBox</span><a href="/privacy-policy">Privacy Policy</a></footer>
+<footer class="site-footer"><span>OnlineBox</span><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
 </body>
 </html>`
