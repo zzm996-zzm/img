@@ -186,6 +186,7 @@ func TestHandleSitemap(t *testing.T) {
 	}
 	var foundCompressor bool
 	var foundPrivacy bool
+	var foundM3U8 bool
 	for _, item := range parsed.URLs {
 		if item.Loc == "https://onlinebox.site/image-compressor" {
 			foundCompressor = true
@@ -193,12 +194,18 @@ func TestHandleSitemap(t *testing.T) {
 		if item.Loc == "https://onlinebox.site/privacy-policy" {
 			foundPrivacy = true
 		}
+		if item.Loc == "https://onlinebox.site/m3u8-player" {
+			foundM3U8 = true
+		}
 	}
 	if !foundCompressor {
 		t.Fatalf("expected image compressor URL in sitemap: %#v", parsed.URLs)
 	}
 	if !foundPrivacy {
 		t.Fatalf("expected privacy policy URL in sitemap: %#v", parsed.URLs)
+	}
+	if !foundM3U8 {
+		t.Fatalf("expected M3U8 player URL in sitemap: %#v", parsed.URLs)
 	}
 }
 
@@ -371,6 +378,48 @@ func TestHandleIndexRendersFreeBatchCompressor(t *testing.T) {
 	}
 }
 
+func TestHandleIndexRendersM3U8Player(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/m3u8-player", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>M3U8 Player | Free Online HLS Stream Player - OnlineBox</title>",
+		`<meta name="description" content="Play any M3U8 or HLS stream directly in your browser for free. No software, no uploads — just paste the URL and watch.">`,
+		`<link rel="canonical" href="https://onlinebox.site/m3u8-player">`,
+		`https://cdn.jsdelivr.net/npm/hls.js@latest`,
+		`id="m3u8Url"`,
+		`id="m3u8Video" playsinline`,
+		`class="m3u8-player"`,
+		`function loadM3U8()`,
+		`Hls.isSupported()`,
+		`canPlayType('application/vnd.apple.mpegurl')`,
+		`setTimeout(()=>m3u8Player.classList.remove('controls-visible'),2000)`,
+		"How to use the M3U8 Player",
+		"Best use cases for M3U8 playback",
+		"M3U8 FAQ",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected body to contain %q", expected)
+		}
+	}
+	for _, unexpected := range []string{
+		`controls></video>`,
+		`id="csvInput"`,
+		`id="imageInput"`,
+	} {
+		if strings.Contains(body, unexpected) {
+			t.Fatalf("expected M3U8 page to omit %q", unexpected)
+		}
+	}
+}
+
 func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 	t.Setenv("SITE_URL", "https://onlinebox.site/")
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -391,6 +440,7 @@ func TestHandleIndexRendersEnglishDirectoryHome(t *testing.T) {
 		"Data and creator tools",
 		`href="/csv-to-json"`,
 		`href="/image-compressor"`,
+		`href="/m3u8-player"`,
 		`href="/privacy-policy"`,
 	} {
 		if !strings.Contains(body, expected) {

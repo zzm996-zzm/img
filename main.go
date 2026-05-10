@@ -176,6 +176,17 @@ var publicPages = []publicPage{
 		PageUtility: "markdown",
 	},
 	{
+		Path:        "/m3u8-player",
+		Title:       "M3U8 Player | Free Online HLS Stream Player - OnlineBox",
+		Description: "Play any M3U8 or HLS stream directly in your browser for free. No software, no uploads — just paste the URL and watch.",
+		Heading:     "M3U8 Player",
+		Accent:      "Free Online HLS Stream Player",
+		Intro:       "Paste any M3U8 URL and play it directly in your browser. No software needed, no uploads.",
+		Kind:        "utility",
+		PageTool:    "compress",
+		PageUtility: "m3u8",
+	},
+	{
 		Path:        "/privacy-policy",
 		Title:       "Privacy Policy | OnlineBox",
 		Description: "Privacy Policy for OnlineBox browser tools, including local processing, analytics, cookies and advertising disclosures.",
@@ -298,6 +309,9 @@ func toolLabel(page publicPage) string {
 	if page.PageUtility == "csv" || page.PageUtility == "markdown" {
 		return "Data"
 	}
+	if page.PageUtility == "m3u8" {
+		return "Video"
+	}
 	return "Creator"
 }
 
@@ -338,6 +352,9 @@ func renderPrivacyHTML(page publicPage) string {
 func qrScriptTag(page publicPage) string {
 	if page.PageUtility == "qr" {
 		return `<script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>`
+	}
+	if page.PageUtility == "m3u8" {
+		return `<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>`
 	}
 	return ""
 }
@@ -518,6 +535,33 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 <div id="gradientPreview" class="gradient-preview"></div>
 <pre id="gradientCode" class="output"></pre>
 </section>`
+	case "m3u8":
+		return `<section class="tool-panel m3u8-tool">
+<div class="m3u8-input-row">
+<input id="m3u8Url" type="url" placeholder="https://example.com/live/playlist.m3u8" aria-label="M3U8 URL">
+<button class="btn m3u8-play-btn" onclick="loadM3U8()">Play</button>
+</div>
+<div id="m3u8Status" class="hint">Enter an HLS stream URL, then click Play.</div>
+<div class="m3u8-player" id="m3u8Player">
+<video id="m3u8Video" playsinline></video>
+<div class="m3u8-controls" id="m3u8Controls">
+<button class="player-btn" id="m3u8Toggle" onclick="toggleM3U8Playback()" aria-label="Play or pause">Play</button>
+<span class="m3u8-time" id="m3u8Current">0:00</span>
+<input id="m3u8Progress" class="m3u8-progress" type="range" min="0" max="1000" value="0" aria-label="Playback progress">
+<span class="m3u8-time" id="m3u8Duration">0:00</span>
+<input id="m3u8Volume" class="m3u8-volume" type="range" min="0" max="1" step="0.01" value="1" aria-label="Volume">
+<div class="speed-group" aria-label="Playback speed">
+<button class="speed-btn" onclick="setM3U8Speed(0.5,this)">0.5x</button>
+<button class="speed-btn" onclick="setM3U8Speed(0.75,this)">0.75x</button>
+<button class="speed-btn on" onclick="setM3U8Speed(1,this)">1x</button>
+<button class="speed-btn" onclick="setM3U8Speed(1.25,this)">1.25x</button>
+<button class="speed-btn" onclick="setM3U8Speed(1.5,this)">1.5x</button>
+<button class="speed-btn" onclick="setM3U8Speed(2,this)">2x</button>
+</div>
+<button class="player-btn" onclick="toggleM3U8Fullscreen()" aria-label="Fullscreen">Full</button>
+</div>
+</div>
+</section>`
 	}
 	switch page.PageTool {
 	case "convert":
@@ -609,6 +653,25 @@ func landingGuideHTML(page publicPage) string {
 		return utilityGuideHTML("QR code generator", "Enter a link or text, choose foreground and background colors, generate the QR code and download it as PNG.", "It is useful for campaign links, menus, social profiles, business cards and printed materials.")
 	case "/markdown-to-pdf":
 		return utilityGuideHTML("Markdown to PDF", "Paste Markdown text, preview the formatted result and use the browser print dialog to save it as PDF.", "It is useful for project notes, documentation drafts, meeting notes and lightweight formatting.")
+	case "/m3u8-player":
+		return `<section class="guide">
+<h2>How to use the M3U8 Player</h2>
+<ol>
+<li>Paste a direct .m3u8 or HLS playlist URL into the input field.</li>
+<li>Click Play. Safari uses native HLS playback, while other modern browsers use hls.js.</li>
+<li>Use the custom controls to pause, seek, adjust volume, change speed or enter fullscreen.</li>
+</ol>
+<h2>Best use cases for M3U8 playback</h2>
+<p>This online HLS player is useful for testing live streams, previewing adaptive bitrate video, checking VOD playlists, verifying CDN delivery and opening M3U8 links without installing desktop media software.</p>
+<section class="faq-block">
+<h2>M3U8 FAQ</h2>
+<details open><summary>What is an M3U8 file?</summary><p>An M3U8 file is a playlist used by HLS video streams. It points the player to media segments and, in adaptive streams, alternate quality levels.</p></details>
+<details><summary>Does this upload my video anywhere?</summary><p>No. The page loads the stream URL in your browser. OnlineBox does not upload or re-host the video content.</p></details>
+<details><summary>Why does an M3U8 URL fail to play?</summary><p>The stream may block cross-origin browser playback, require authentication, be offline, use unsupported codecs or only allow specific domains.</p></details>
+<details><summary>Does it work with live HLS streams?</summary><p>Yes. It can play both live and video-on-demand HLS playlists when the stream server allows browser playback.</p></details>
+<details><summary>Which browsers support M3U8 playback?</summary><p>Safari supports HLS natively. Chrome, Edge and Firefox can play many HLS streams through hls.js when Media Source Extensions are available.</p></details>
+</section>
+</section>`
 	case "/social-card-maker":
 		return utilityGuideHTML("social card maker", "Enter a title, subtitle and accent color, then generate a 1200x630 sharing image.", "It is useful for blog covers, product updates, social posts and launch announcements.")
 	case "/gradient-generator":
@@ -691,6 +754,35 @@ renderSocialCard(false);`
 		return `function randomColor(){return '#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');}
 function generateGradient(){const colors=[randomColor(),randomColor(),randomColor()];const direction=document.getElementById('gradientDirection').value;const css='linear-gradient('+direction+', '+colors.join(', ')+')';document.getElementById('gradientPreview').style.background=css;document.getElementById('gradientCode').textContent='background: '+css+';';}
 generateGradient();`
+	case "m3u8":
+		return `let m3u8Hls=null,m3u8HideTimer=null,m3u8Seeking=false;
+const m3u8Video=document.getElementById('m3u8Video');
+const m3u8Player=document.getElementById('m3u8Player');
+const m3u8Progress=document.getElementById('m3u8Progress');
+const m3u8Status=document.getElementById('m3u8Status');
+function setM3U8Status(message){m3u8Status.textContent=message;}
+function formatM3U8Time(value){if(!Number.isFinite(value)||value<0)return '0:00';const total=Math.floor(value);const h=Math.floor(total/3600);const m=Math.floor((total%3600)/60);const s=String(total%60).padStart(2,'0');return h? h+':'+String(m).padStart(2,'0')+':'+s : m+':'+s;}
+function showM3U8Controls(){m3u8Player.classList.add('controls-visible');clearTimeout(m3u8HideTimer);if(!m3u8Video.paused){m3u8HideTimer=setTimeout(()=>m3u8Player.classList.remove('controls-visible'),2000);}}
+function updateM3U8Button(){document.getElementById('m3u8Toggle').textContent=m3u8Video.paused?'Play':'Pause';}
+function updateM3U8Progress(){document.getElementById('m3u8Current').textContent=formatM3U8Time(m3u8Video.currentTime);document.getElementById('m3u8Duration').textContent=formatM3U8Time(m3u8Video.duration);if(!m3u8Seeking&&Number.isFinite(m3u8Video.duration)&&m3u8Video.duration>0){m3u8Progress.value=Math.round((m3u8Video.currentTime/m3u8Video.duration)*1000);}}
+function loadM3U8(){const url=document.getElementById('m3u8Url').value.trim();if(!url){setM3U8Status('Paste an M3U8 URL first.');return;}if(m3u8Hls){m3u8Hls.destroy();m3u8Hls=null;}m3u8Video.pause();m3u8Video.removeAttribute('src');m3u8Video.load();setM3U8Status('Loading stream...');if(m3u8Video.canPlayType('application/vnd.apple.mpegurl')){m3u8Video.src=url;m3u8Video.play().then(()=>setM3U8Status('Playing with native HLS support.')).catch(()=>setM3U8Status('Stream loaded. Press Play to start.'));return;}if(window.Hls&&Hls.isSupported()){m3u8Hls=new Hls();m3u8Hls.loadSource(url);m3u8Hls.attachMedia(m3u8Video);m3u8Hls.on(Hls.Events.MANIFEST_PARSED,()=>{m3u8Video.play().then(()=>setM3U8Status('Playing with hls.js.')).catch(()=>setM3U8Status('Stream loaded. Press Play to start.'));});m3u8Hls.on(Hls.Events.ERROR,(event,data)=>{if(data&&data.fatal){setM3U8Status('Playback error: '+data.type+'. Check the URL, CORS settings or stream availability.');}});return;}setM3U8Status('This browser does not support HLS playback.');}
+function toggleM3U8Playback(){if(!m3u8Video.src&&!m3u8Hls){loadM3U8();return;}if(m3u8Video.paused){m3u8Video.play().catch(()=>setM3U8Status('Playback was blocked. Check the stream URL.'));}else{m3u8Video.pause();}showM3U8Controls();}
+function setM3U8Speed(speed,button){m3u8Video.playbackRate=speed;document.querySelectorAll('.speed-btn').forEach(item=>item.classList.remove('on'));button.classList.add('on');showM3U8Controls();}
+function toggleM3U8Fullscreen(){if(document.fullscreenElement){document.exitFullscreen();return;}if(m3u8Player.requestFullscreen)m3u8Player.requestFullscreen();}
+m3u8Player.addEventListener('mousemove',showM3U8Controls);
+m3u8Player.addEventListener('mouseenter',showM3U8Controls);
+m3u8Player.addEventListener('mouseleave',()=>{clearTimeout(m3u8HideTimer);m3u8HideTimer=setTimeout(()=>m3u8Player.classList.remove('controls-visible'),2000);});
+m3u8Video.addEventListener('play',()=>{updateM3U8Button();showM3U8Controls();});
+m3u8Video.addEventListener('pause',()=>{updateM3U8Button();showM3U8Controls();});
+m3u8Video.addEventListener('timeupdate',updateM3U8Progress);
+m3u8Video.addEventListener('durationchange',updateM3U8Progress);
+m3u8Video.addEventListener('loadedmetadata',updateM3U8Progress);
+m3u8Video.addEventListener('click',toggleM3U8Playback);
+m3u8Progress.addEventListener('input',()=>{m3u8Seeking=true;if(Number.isFinite(m3u8Video.duration)&&m3u8Video.duration>0){document.getElementById('m3u8Current').textContent=formatM3U8Time((m3u8Progress.value/1000)*m3u8Video.duration);}});
+m3u8Progress.addEventListener('change',()=>{if(Number.isFinite(m3u8Video.duration)&&m3u8Video.duration>0){m3u8Video.currentTime=(m3u8Progress.value/1000)*m3u8Video.duration;}m3u8Seeking=false;showM3U8Controls();});
+document.getElementById('m3u8Volume').addEventListener('input',event=>{m3u8Video.volume=parseFloat(event.target.value);showM3U8Controls();});
+document.getElementById('m3u8Url').addEventListener('keydown',event=>{if(event.key==='Enter')loadM3U8();});
+showM3U8Controls();`
 	default:
 		return ""
 	}
@@ -773,11 +865,20 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .preview.markdown-body{background:#fff;color:#1f2328;color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;white-space:normal;--color-canvas-default:#fff;--color-canvas-subtle:#f6f8fa;--color-fg-default:#1f2328;--color-fg-muted:#59636e;--color-border-default:#d0d7de;--color-border-muted:#d8dee4}.preview.markdown-body h1,.preview.markdown-body h2,.preview.markdown-body h3{font-family:inherit;color:#1f2328}.preview.markdown-body h3{font-size:1.25em}.preview.markdown-body blockquote{background:transparent;color:#59636e;border-left-color:#d0d7de}.preview.markdown-body pre{background:#f6f8fa;border:0;color:#1f2328}.preview.markdown-body code{background:rgba(175,184,193,.2);color:#1f2328}.preview.markdown-body pre code{background:transparent;color:#1f2328}.preview.markdown-body table{display:table;width:100%;background:#fff;color:#1f2328}.preview.markdown-body th{background:#f6f8fa;color:#1f2328}.preview.markdown-body td{background:#fff;color:#1f2328}
 .canvas-wrap{display:flex;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;overflow:auto}
 .canvas-wrap canvas{max-width:100%;height:auto}.wide canvas{width:100%;max-width:520px}.gradient-preview{height:210px;border-radius:12px;border:1px solid var(--border);margin-top:16px}
+.m3u8-tool{display:grid;gap:14px}.m3u8-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch}.m3u8-input-row input{min-width:0}.m3u8-play-btn{width:auto;margin-top:0;min-width:112px;align-items:center}
+.m3u8-player{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:8px;box-shadow:0 16px 38px rgba(0,0,0,.38);overflow:hidden;border:1px solid var(--border)}
+.m3u8-player video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
+.m3u8-controls{position:absolute;left:0;right:0;bottom:0;display:grid;grid-template-columns:auto auto minmax(90px,1fr) auto minmax(70px,90px) auto auto;gap:8px;align-items:center;padding:28px 12px 12px;background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,.58) 58%,transparent);opacity:0;transform:translateY(8px);pointer-events:none;transition:opacity .18s,transform .18s}
+.m3u8-player.controls-visible .m3u8-controls,.m3u8-player:hover .m3u8-controls{opacity:1;transform:translateY(0);pointer-events:auto}
+.player-btn,.speed-btn{border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.08);color:#fff;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap}
+.player-btn:hover,.speed-btn:hover,.speed-btn.on{border-color:var(--accent);color:var(--accent);background:rgba(212,255,87,.12)}
+.m3u8-time{color:#d8d8d8;font-size:12px;font-weight:800;min-width:42px;text-align:center}.m3u8-progress,.m3u8-volume{accent-color:var(--accent);padding:0;border:0;background:transparent}.m3u8-progress{width:100%}.m3u8-volume{width:90px}
+.speed-group{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.speed-btn{padding:7px 8px}
 .hint{color:var(--muted);font-size:13px;line-height:1.6;margin-top:10px}.pro-kicker{display:inline-flex;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(212,255,87,.24);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}
 .guide{color:var(--muted);line-height:1.75;margin:30px 0}.guide h2{font-family:'Syne',sans-serif;color:var(--text);font-size:22px;margin:26px 0 10px}.guide p{margin-bottom:12px}.guide ol{padding-left:22px;margin:10px 0 18px}.guide li{margin-bottom:8px}.faq-block{margin-top:24px}.faq-block details{border-top:1px solid var(--border);padding:14px 0}.faq-block summary{color:var(--text);font-weight:800;cursor:pointer}.faq-block p{margin:10px 0 0}
 .related{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:30px}.related a{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);text-decoration:none;padding:12px;font-weight:800}
 .site-footer{border-top:1px solid var(--border);margin-top:34px;padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.site-footer a{color:var(--text);text-decoration:none;font-weight:800}
-@media(max-width:620px){.two,.related{grid-template-columns:1fr}.wrap{padding-top:30px}}
+@media(max-width:620px){.two,.related{grid-template-columns:1fr}.wrap{padding-top:30px}.m3u8-input-row{grid-template-columns:1fr}.m3u8-play-btn{width:100%}.m3u8-controls{grid-template-columns:auto 1fr auto;gap:7px}.m3u8-progress{grid-column:1/-1;grid-row:1}#m3u8Current{display:none}.m3u8-volume{width:76px}.speed-group{grid-column:1/-1;justify-content:flex-start}.m3u8-time{min-width:36px}}
 </style>
 </head>
 <body>
