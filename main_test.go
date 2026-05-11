@@ -391,7 +391,7 @@ func TestHandleIndexRendersUtilityLandingPage(t *testing.T) {
 		"How to use the CSV to JSON converter",
 		"When should you convert CSV to JSON?",
 		"CSV to JSON FAQ",
-		`href="/image-compressor"`,
+		`href="/json-formatter"`,
 	} {
 		if !strings.Contains(body, expected) {
 			t.Fatalf("expected body to contain %q", expected)

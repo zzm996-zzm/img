@@ -1372,17 +1372,26 @@ func imageToolHTML(label, controls, actionLabel, action string) string {
 }
 
 func relatedLinksHTML(page publicPage) string {
-	links := make([]string, 0, 5)
-	for _, item := range publicPages {
-		if item.Path == page.Path {
-			continue
-		}
-		if item.Path == "/" || item.Kind == page.Kind || len(links) < 3 {
-			links = append(links, fmt.Sprintf(`<a href="%s">%s</a>`, html.EscapeString(item.Path), html.EscapeString(item.Heading)))
-		}
-		if len(links) >= 5 {
-			break
-		}
+	anchors := map[string][][2]string{
+		"/image-compressor":       {{"/batch-image-compressor", "Batch image compressor"}, {"/image-resizer", "Image resizer for exact dimensions"}, {"/image-converter", "HEIC to JPG converter"}, {"/blog/compress-image-to-200kb-online", "How to compress an image to 200KB"}},
+		"/batch-image-compressor": {{"/image-compressor", "Compress one image to a target KB"}, {"/image-resizer", "Resize images online"}, {"/image-converter", "Convert HEIC, JPG, PNG and WebP"}},
+		"/image-converter":        {{"/image-compressor", "Image compressor to 200KB"}, {"/image-resizer", "Resize converted images"}, {"/blog/convert-heic-to-jpg-online", "How to convert HEIC to JPG"}},
+		"/image-resizer":          {{"/image-compressor", "Compress resized images"}, {"/batch-image-compressor", "Batch image compressor"}, {"/image-converter", "Image format converter"}},
+		"/json-formatter":         {{"/csv-to-json", "CSV to JSON converter"}, {"/blog/format-and-validate-json-online", "How to format and validate JSON"}, {"/markdown-to-pdf", "Markdown to PDF converter"}},
+		"/csv-to-json":            {{"/json-formatter", "JSON Formatter and Validator"}, {"/blog/format-and-validate-json-online", "JSON validation guide"}, {"/markdown-to-pdf", "Markdown to PDF converter"}},
+		"/markdown-to-pdf":        {{"/pdf-unlocker", "PDF Unlocker for copy and print restrictions"}, {"/json-formatter", "JSON Formatter for code snippets"}, {"/blog/convert-markdown-to-pdf-browser", "How to convert Markdown to PDF"}},
+		"/pdf-unlocker":           {{"/markdown-to-pdf", "Markdown to PDF converter"}, {"/blog/remove-pdf-copy-print-restrictions", "How to remove PDF copy and print restrictions"}, {"/json-formatter", "JSON Formatter and Validator"}},
+		"/qr-code-generator":      {{"/social-card-maker", "Social card maker"}, {"/gradient-generator", "CSS gradient generator"}, {"/image-compressor", "Compress QR images"}},
+		"/social-card-maker":      {{"/gradient-generator", "CSS gradient generator"}, {"/image-compressor", "Image compressor"}, {"/qr-code-generator", "QR code generator"}},
+		"/gradient-generator":     {{"/social-card-maker", "Social card maker"}, {"/image-watermark", "Image watermark tool"}, {"/qr-code-generator", "QR code generator"}},
+	}
+	selected := anchors[page.Path]
+	if len(selected) == 0 {
+		selected = [][2]string{{"/image-compressor", "Image compressor"}, {"/json-formatter", "JSON Formatter and Validator"}, {"/markdown-to-pdf", "Markdown to PDF converter"}, {"/pdf-unlocker", "PDF Unlocker"}}
+	}
+	links := make([]string, 0, len(selected))
+	for _, item := range selected {
+		links = append(links, fmt.Sprintf(`<a href="%s">%s</a>`, html.EscapeString(item[0]), html.EscapeString(item[1])))
 	}
 	return strings.Join(links, "")
 }
@@ -1421,6 +1430,8 @@ func landingGuideHTML(page publicPage) string {
 <p>This tool is useful for reading API responses, checking configuration files, cleaning webhook payloads, preparing mock data, debugging front-end state and sharing compact JSON snippets. Everything runs locally in your browser for the core formatting workflow, so pasted JSON is not uploaded for formatting.</p>
 <h2>What the validator checks</h2>
 <p>The validator uses the browser JSON parser and reports syntax problems such as trailing commas, missing quotes, unclosed objects, invalid escape sequences and unexpected tokens. When the browser exposes a character position, the error message includes the line and column.</p>
+<h2>Common JSON formatting tasks</h2>
+<p>Use this page when you need to format JSON online, validate a JSON error line, beautify API responses, minify JSON for storage, clean webhook payloads or check whether a configuration file is valid JSON. The formatter is useful for small debugging tasks because it does not require installing a desktop app or uploading private API data.</p>
 <section class="faq-block">
 <h2>JSON Formatter FAQ</h2>
 <details open><summary>Is this JSON formatter free?</summary><p>Yes. You can format, validate, minify, copy and clear JSON directly in the browser.</p></details>
@@ -1431,9 +1442,36 @@ func landingGuideHTML(page publicPage) string {
 </section>
 </section>`
 	case "/image-compressor":
-		return imageGuideHTML("image compressor", "Upload an image, enter a target size such as 200KB, 500KB or 1MB, then click Compress image. The tool tries to produce a smaller JPG while staying close to your target.", "It is useful for application forms, profile photos, ecommerce uploads, job portals and social media images.")
+		return `<section class="guide">
+<h2>How to use the image compressor</h2>
+<ol><li>Upload an image, enter a target size such as 200KB, 500KB or 1MB, then click Compress image.</li><li>The compressor exports a smaller JPG locally in your browser while trying to stay close to your target file size.</li><li>If the result is not small enough, lower the target KB value and compress the image again.</li></ol>
+<h2>Compress image to 200KB, 500KB or 1MB</h2>
+<p>This image compressor is useful when a form, job portal, profile page or ecommerce platform asks for a photo under a specific size limit. You can compress JPG, PNG, WebP, HEIC and HEIF images to common targets such as 200KB, 500KB or 1MB without uploading the original file to a server.</p>
+<h2>When should you reduce image size for upload?</h2>
+<p>Use it for application forms, avatars, document photos, marketplace images, product photos and social media uploads. If you also need exact width and height, use the related image resizer after compression.</p>
+<section class="faq-block">
+<h2>Image Compressor FAQ</h2>
+<details open><summary>Does the image upload to a server?</summary><p>No. The current tool uses browser features to process the image locally. The server mainly delivers the page.</p></details>
+<details><summary>Can I compress an image to exactly 200KB?</summary><p>The tool tries to get close to the target size. The exact output depends on image dimensions, detail and browser encoding support.</p></details>
+<details><summary>Which image formats are supported?</summary><p>Common JPG, PNG and WebP files are supported, plus HEIC and HEIF preview conversion in supported browsers.</p></details>
+<details><summary>Where is the compressed image saved?</summary><p>The compressed image downloads to your browser's default download folder.</p></details>
+</section>
+</section>`
 	case "/image-converter":
-		return imageGuideHTML("HEIC to JPG image converter", "Choose JPG, PNG or WebP as the output format, upload a HEIC, HEIF, JPG, PNG or WebP image and click Convert image. The converted file downloads automatically.", "It is useful when you need to turn iPhone HEIC photos into JPG, convert PNG to JPG, create WebP assets for the web or fix an incompatible image format.")
+		return `<section class="guide">
+<h2>How to use the HEIC to JPG image converter</h2>
+<ol><li>Choose JPG, PNG or WebP as the output format.</li><li>Upload a HEIC, HEIF, JPG, PNG or WebP image and click Convert image.</li><li>The converted image downloads automatically after browser-local processing.</li></ol>
+<h2>Convert iPhone HEIC photos to JPG online</h2>
+<p>Many websites and older apps do not accept HEIC photos from iPhone. This converter helps turn iPhone HEIC photos into JPG, PNG or WebP in your browser, so you can upload photos to forms, marketplaces, CMS editors and social media tools without installing image software.</p>
+<h2>When is the HEIC to JPG image converter useful?</h2>
+<p>Use it to convert PNG to JPG for smaller uploads, create WebP assets for web pages, turn screenshots into JPG or fix an incompatible image format before sending a file to another service.</p>
+<section class="faq-block">
+<h2>HEIC to JPG FAQ</h2>
+<details open><summary>Does the image upload to a server?</summary><p>No. Conversion runs locally in your browser for the core workflow.</p></details>
+<details><summary>Can I convert iPhone photos?</summary><p>Yes. HEIC and HEIF files from iPhone can be converted in browsers that support the local decoder library.</p></details>
+<details><summary>Which output formats are supported?</summary><p>You can export JPG, PNG or WebP depending on browser support.</p></details>
+</section>
+</section>`
 	case "/image-resizer":
 		return imageGuideHTML("image resizer", "Enter the target width and height, choose contain, cover or stretch mode, then upload an image and resize it.", "It is useful for avatars, product photos, social covers, form uploads and fixed-ratio design assets.")
 	case "/batch-image-compressor":
@@ -1445,7 +1483,25 @@ func landingGuideHTML(page publicPage) string {
 	case "/qr-code-generator":
 		return utilityGuideHTML("QR code generator", "Enter a link or text, choose foreground and background colors, generate the QR code and download it as PNG.", "It is useful for campaign links, menus, social profiles, business cards and printed materials.")
 	case "/markdown-to-pdf":
-		return utilityGuideHTML("Markdown to PDF", "Paste Markdown text, preview the formatted result and use the browser print dialog to save it as PDF.", "It is useful for project notes, documentation drafts, meeting notes and lightweight formatting.")
+		return `<section class="guide">
+<h2>How to convert Markdown to PDF</h2>
+<ol>
+<li>Paste Markdown text into the editor or open a local .md file.</li>
+<li>Check the live preview with tables, code blocks, syntax highlighting and LaTeX math rendering.</li>
+<li>Choose a style preset or custom PDF settings, then export with your browser print dialog.</li>
+</ol>
+<h2>Markdown to PDF with live preview</h2>
+<p>This tool is useful when you need to export Markdown to PDF in the browser with a live preview, code highlighting, math formulas, custom title, page numbers and academic or minimal formatting. It is a practical option for project notes, documentation drafts, meeting notes, lightweight reports and README-style documents.</p>
+<h2>When browser-based PDF export helps</h2>
+<p>Use it when you want a quick Markdown PDF without installing a desktop editor. Your draft is saved locally in the browser, and the Markdown content is not uploaded to a server for rendering.</p>
+<section class="faq-block">
+<h2>Markdown to PDF FAQ</h2>
+<details open><summary>Does my Markdown upload to a server?</summary><p>No. Editing, preview and export run in your browser.</p></details>
+<details><summary>Does it support code highlighting?</summary><p>Yes. Code blocks can be highlighted in the preview and printed PDF.</p></details>
+<details><summary>Can I customize PDF style?</summary><p>Yes. Choose Default, Academic, Minimal or Custom style settings before exporting.</p></details>
+<details><summary>Does it support math formulas?</summary><p>Yes. The page uses KaTeX for LaTeX-style math rendering.</p></details>
+</section>
+</section>`
 	case "/pdf-unlocker":
 		return `<section class="guide">
 <h2>How to use PDF Unlocker</h2>
@@ -1456,6 +1512,8 @@ func landingGuideHTML(page publicPage) string {
 </ol>
 <h2>Best use cases</h2>
 <p>PDF Unlocker is useful when you own the document or have permission to work with it and need to copy text, print a file, annotate pages, merge documents or edit a PDF in another app. Everything runs locally in your browser, so the PDF is not uploaded to OnlineBox.</p>
+<h2>Remove PDF copy, print and edit restrictions</h2>
+<p>Use this page to remove PDF copy restrictions, unlock PDF printing restrictions or remove edit restrictions from a PDF that you can already open. It does not remove open passwords. If a file asks for a password before it can be viewed, the browser cannot rebuild it without that password.</p>
 <section class="faq-block">
 <h2>PDF Unlocker FAQ</h2>
 <details open><summary>Does this upload my PDF?</summary><p>No. The PDF is processed in your browser with pdf-lib. The server only delivers the page and JavaScript library.</p></details>
