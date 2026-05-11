@@ -175,6 +175,17 @@ var publicPages = []publicPage{
 		PageUtility: "gradient",
 	},
 	{
+		Path:        "/folder-to-zip",
+		Title:       "Folder to ZIP | Compress Folders Online Free - OnlineBox",
+		Description: "Compress a folder into a ZIP file in your browser. No upload, no server — create ZIP files online for free.",
+		Heading:     "Folder to ZIP",
+		Accent:      "Compress Folders Online in Your Browser",
+		Intro:       "Create ZIP files from folders or multiple files directly in your browser. Choose a compression level, keep folder structure and download the ZIP without uploading files.",
+		Kind:        "utility",
+		PageTool:    "compress",
+		PageUtility: "folder-zip",
+	},
+	{
 		Path:        "/csv-to-json",
 		Title:       "CSV to JSON Converter | Free Online CSV JSON Tool",
 		Description: "Convert CSV text to JSON online. Paste CSV with headers and get formatted JSON for API testing, imports, data cleanup and mock data.",
@@ -409,6 +420,9 @@ func toolLabel(page publicPage) string {
 	}
 	if page.PageUtility == "pdf-unlocker" {
 		return "PDF"
+	}
+	if page.PageUtility == "folder-zip" {
+		return "Files"
 	}
 	return "Creator"
 }
@@ -1024,6 +1038,9 @@ func qrScriptTag(page publicPage) string {
 	if page.PageUtility == "pdf-unlocker" {
 		return `<script src="https://cdn.jsdelivr.net/npm/pdf-lib@latest/dist/pdf-lib.min.js"></script>`
 	}
+	if page.PageUtility == "folder-zip" {
+		return `<script src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"></script>`
+	}
 	if page.PageTool == "exif" {
 		return `<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exifr/dist/lite.umd.js"></script>`
@@ -1262,6 +1279,30 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 <button id="pdfUnlockButton" class="btn" onclick="document.getElementById('pdfUnlockInput').click()">Choose PDF</button>
 <div id="pdfUnlockStatus" class="pdf-status" aria-live="polite">No PDF selected yet.</div>
 </section>`
+	case "folder-zip":
+		return `<section class="tool-panel zip-tool">
+<input id="zipFolderInput" class="file-input-hidden" type="file" webkitdirectory multiple onchange="loadZipFiles(this.files)">
+<input id="zipFilesInput" class="file-input-hidden" type="file" multiple onchange="loadZipFiles(this.files)">
+<div id="zipDrop" class="file-drop zip-drop" role="button" tabindex="0" onclick="document.getElementById('zipFolderInput').click()" onkeydown="handleZipDropKey(event)">
+<div class="file-drop-icon">ZIP</div>
+<strong>Drop files here or choose a folder</strong>
+<span>Create a ZIP locally in your browser. Folder structure is kept by default.</span>
+</div>
+<div class="zip-actions">
+<button class="btn compact" onclick="document.getElementById('zipFolderInput').click()">Choose folder</button>
+<button class="ghost compact" onclick="document.getElementById('zipFilesInput').click()">Choose files</button>
+</div>
+<div class="zip-options">
+<label>Compression level<select id="zipLevel"><option value="1">Fast</option><option value="6" selected>Balanced</option><option value="9">Maximum</option></select></label>
+<label>ZIP file name<input id="zipName" value="onlinebox-files.zip"></label>
+<label class="check-row"><input id="zipKeepPaths" type="checkbox" checked> Keep folder structure</label>
+<label class="check-row"><input id="zipSkipJunk" type="checkbox" checked> Skip .DS_Store, Thumbs.db and hidden files</label>
+</div>
+<button id="zipCreateButton" class="btn" onclick="createFolderZip()">Create ZIP</button>
+<div id="zipSummary" class="zip-summary">No files selected yet.</div>
+<div id="zipAnalysis" class="zip-analysis"></div>
+<div id="zipFileList" class="file-list"></div>
+</section>`
 	case "qr":
 		return `<section class="tool-panel">
 <label for="qrText">QR code content</label>
@@ -1384,6 +1425,7 @@ func relatedLinksHTML(page publicPage) string {
 		"/qr-code-generator":      {{"/social-card-maker", "Social card maker"}, {"/gradient-generator", "CSS gradient generator"}, {"/image-compressor", "Compress QR images"}},
 		"/social-card-maker":      {{"/gradient-generator", "CSS gradient generator"}, {"/image-compressor", "Image compressor"}, {"/qr-code-generator", "QR code generator"}},
 		"/gradient-generator":     {{"/social-card-maker", "Social card maker"}, {"/image-watermark", "Image watermark tool"}, {"/qr-code-generator", "QR code generator"}},
+		"/folder-to-zip":          {{"/image-compressor", "Image compressor to reduce files before ZIP"}, {"/pdf-unlocker", "PDF Unlocker for PDF files"}, {"/json-formatter", "JSON Formatter before sharing data files"}},
 	}
 	selected := anchors[page.Path]
 	if len(selected) == 0 {
@@ -1546,6 +1588,27 @@ func landingGuideHTML(page publicPage) string {
 		return utilityGuideHTML("social card maker", "Enter a title, subtitle and accent color, then generate a 1200x630 sharing image.", "It is useful for blog covers, product updates, social posts and launch announcements.")
 	case "/gradient-generator":
 		return utilityGuideHTML("gradient generator", "Choose a direction, generate a random gradient and copy the CSS background code.", "It is useful for website backgrounds, cards, banners, posters and visual exploration.")
+	case "/folder-to-zip":
+		return `<section class="guide">
+<h2>How to compress a folder to ZIP online</h2>
+<ol>
+<li>Click Choose folder or drag multiple files into the upload area.</li>
+<li>Choose Fast, Balanced or Maximum compression. Keep folder structure if you want the ZIP to preserve subfolders.</li>
+<li>Click Create ZIP and download the ZIP file generated locally in your browser.</li>
+</ol>
+<h2>Folder to ZIP in your browser</h2>
+<p>This tool creates ZIP files online without uploading your folder to a server. It is useful when you need to send multiple files, archive a project folder, package CSV and JSON data files, collect documents or share a folder with its structure preserved.</p>
+<h2>What compresses well?</h2>
+<p>Text, code, CSV, JSON, HTML, CSS, logs and similar files usually compress well. JPG, PNG, WebP, PDF, MP4, MP3 and existing ZIP or RAR archives are already compressed, so the ZIP may not become much smaller. For images, compress them first with the image compressor if file size matters.</p>
+<section class="faq-block">
+<h2>Folder to ZIP FAQ</h2>
+<details open><summary>Does the folder upload to a server?</summary><p>No. Files are read by your browser and compressed locally with fflate.</p></details>
+<details><summary>Can it keep folder structure?</summary><p>Yes. Keep folder structure is enabled by default when your browser provides relative folder paths.</p></details>
+<details><summary>Does it support many file types?</summary><p>Yes. ZIP can contain almost any file extension. Some file types simply do not shrink much because they are already compressed.</p></details>
+<details><summary>Is Maximum compression the same as 7-Zip?</summary><p>No. This browser tool creates standard ZIP files. 7-Zip can be smaller for text-heavy folders, but ZIP is widely supported and works directly in the browser.</p></details>
+<details><summary>Which browsers support folder upload?</summary><p>Chrome and Edge have the best folder upload support. Other browsers may support selecting multiple files instead.</p></details>
+</section>
+</section>`
 	default:
 		return utilityGuideHTML(page.Heading, page.Intro, "It is useful for quick browser-based file and content tasks.")
 	}
@@ -1656,6 +1719,22 @@ async function unlockPDFFile(file){if(!file)return;if(!/\.pdf$/i.test(file.name|
 function handlePDFUnlockDropKey(event){if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('pdfUnlockInput').click();}}
 function setupPDFUnlockDrop(){const drop=document.getElementById('pdfUnlockDrop');if(!drop)return;['dragenter','dragover'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.add('over');}));['dragleave','drop'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.remove('over');}));drop.addEventListener('drop',event=>{const file=event.dataTransfer.files&&event.dataTransfer.files[0];unlockPDFFile(file);});}
 setupPDFUnlockDrop();`
+	case "folder-zip":
+		return `let zipFiles=[];
+function formatZipBytes(bytes){if(!bytes)return '0 B';const units=['B','KB','MB','GB'];let value=bytes,index=0;while(value>=1024&&index<units.length-1){value/=1024;index++;}return value.toFixed(value>=10||index===0?0:1)+' '+units[index];}
+function zipPath(file){return file.webkitRelativePath||file.name;}
+function zipBaseName(path){return path.split('/').pop()||path;}
+function isZipJunk(path){const parts=path.split('/');const name=zipBaseName(path);return name==='.DS_Store'||name==='Thumbs.db'||parts.some(part=>part.startsWith('.')&&part!=='.');}
+function zipKind(file){const name=(file.name||'').toLowerCase();if(/\.(txt|md|csv|json|xml|html|css|js|ts|tsx|jsx|log|sql|yaml|yml)$/i.test(name))return 'text';if(/\.(jpg|jpeg|png|webp|gif|heic|heif)$/i.test(name))return 'image';if(/\.(mp4|mov|mp3|wav|m4a|webm)$/i.test(name))return 'media';if(/\.(pdf|docx|xlsx|pptx)$/i.test(name))return 'document';if(/\.(zip|rar|7z|gz|tar)$/i.test(name))return 'archive';return 'other';}
+function zipEstimateNote(counts){const text=counts.text||0,compressed=(counts.image||0)+(counts.media||0)+(counts.archive||0)+(counts.document||0);if(text>compressed)return 'High compression expected for text, code, CSV, JSON and logs.';if(compressed>text)return 'Many selected files are already compressed, so ZIP may not become much smaller.';return 'Compression depends on file types. Text shrinks more than images, video, PDF or existing archives.';}
+function setZipSummary(message){document.getElementById('zipSummary').textContent=message;}
+function renderZipSelection(){const skip=document.getElementById('zipSkipJunk').checked;const files=zipFiles.filter(file=>!skip||!isZipJunk(zipPath(file)));const total=files.reduce((sum,file)=>sum+file.size,0);const counts={};files.forEach(file=>{const kind=zipKind(file);counts[kind]=(counts[kind]||0)+1;});setZipSummary(files.length?files.length+' file(s) selected · '+formatZipBytes(total)+' total':'No files selected yet.');document.getElementById('zipAnalysis').innerHTML=files.length?'<span>Text/code: '+(counts.text||0)+'</span><span>Images: '+(counts.image||0)+'</span><span>PDF/Office: '+(counts.document||0)+'</span><span>Media/archives: '+((counts.media||0)+(counts.archive||0))+'</span><small>'+zipEstimateNote(counts)+'</small>':'';const list=document.getElementById('zipFileList');list.textContent='';files.slice(0,10).forEach(file=>{const row=document.createElement('div');row.className='file-pill';const name=document.createElement('span');name.textContent=zipPath(file);const size=document.createElement('span');size.textContent=formatZipBytes(file.size);row.append(name,size);list.appendChild(row);});if(files.length>10){const more=document.createElement('div');more.className='file-pill';more.textContent='+'+(files.length-10)+' more file(s)';list.appendChild(more);}}
+function loadZipFiles(files){zipFiles=Array.from(files||[]);renderZipSelection();}
+function handleZipDropKey(event){if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('zipFolderInput').click();}}
+function setupZipDrop(){const drop=document.getElementById('zipDrop');if(!drop)return;['dragenter','dragover'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.add('over');}));['dragleave','drop'].forEach(name=>drop.addEventListener(name,event=>{event.preventDefault();drop.classList.remove('over');}));drop.addEventListener('drop',event=>loadZipFiles(event.dataTransfer.files));document.getElementById('zipSkipJunk').addEventListener('change',renderZipSelection);}
+function zipDownload(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name.endsWith('.zip')?name:name+'.zip';a.click();URL.revokeObjectURL(url);}
+async function createFolderZip(){const skip=document.getElementById('zipSkipJunk').checked;const keep=document.getElementById('zipKeepPaths').checked;const files=zipFiles.filter(file=>!skip||!isZipJunk(zipPath(file)));if(!files.length){setZipSummary('Choose files or a folder first.');return;}if(!window.fflate){setZipSummary('ZIP library is still loading. Try again in a moment.');return;}const button=document.getElementById('zipCreateButton');button.disabled=true;button.textContent='Creating ZIP...';try{const entries={};for(const file of files){const path=keep?zipPath(file):zipBaseName(zipPath(file));entries[path]=new Uint8Array(await file.arrayBuffer());}const level=parseInt(document.getElementById('zipLevel').value,10)||6;const zipped=fflate.zipSync(entries,{level});zipDownload(new Blob([zipped],{type:'application/zip'}),document.getElementById('zipName').value.trim()||'onlinebox-files.zip');const original=files.reduce((sum,file)=>sum+file.size,0);const saved=original-zipped.length;setZipSummary('ZIP created · '+formatZipBytes(original)+' to '+formatZipBytes(zipped.length)+' · '+(saved>0?formatZipBytes(saved)+' saved':'already compressed files may not shrink'));}catch(error){setZipSummary('Could not create ZIP. Try fewer files or a smaller folder.');}finally{button.disabled=false;button.textContent='Create ZIP';}}
+setupZipDrop();`
 	case "qr":
 		return `function downloadBlob(blob,filename){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.download=filename;a.href=url;a.click();URL.revokeObjectURL(url);}
 function downloadCanvas(id,filename){document.getElementById(id).toBlob(blob=>{if(blob)downloadBlob(blob,filename);},'image/png');}
@@ -1857,6 +1936,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .json-status.valid{border-color:rgba(212,255,87,.26);color:var(--accent);background:var(--accent-dim)}.json-status.invalid{border-color:rgba(255,105,105,.42);color:#ff9a9a;background:rgba(255,105,105,.08)}
 .json-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}.json-area{min-height:430px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;line-height:1.58;tab-size:2}.output-area{background:#141418;color:#f4f4f4}
 .pdf-tool .file-drop-icon{font-size:13px;letter-spacing:.04em}.pdf-status{margin-top:12px;border:1px solid var(--border);background:var(--surface2);border-radius:12px;padding:12px 14px;color:var(--muted);font-size:13px;line-height:1.5}.pdf-status.loading{border-color:rgba(212,255,87,.3);color:var(--accent);background:var(--accent-dim)}.pdf-status.success{border-color:rgba(212,255,87,.3);color:var(--accent)}.pdf-status.error{border-color:rgba(255,105,105,.42);color:#ff9a9a;background:rgba(255,105,105,.08)}.pdf-tool button:disabled{cursor:wait;opacity:.72}
+.zip-tool .file-drop-icon{font-size:13px;letter-spacing:.04em}.zip-actions{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}.zip-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:8px}.zip-options label{margin:0}.check-row{display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);letter-spacing:0;text-transform:none}.check-row input{width:auto}.zip-summary{border:1px solid var(--border);background:var(--surface2);border-radius:12px;padding:12px 14px;color:var(--muted);font-size:13px;line-height:1.5;margin-top:14px}.zip-analysis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.zip-analysis span,.zip-analysis small{background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:9px 10px;color:var(--muted);font-size:12px;line-height:1.4}.zip-analysis small{grid-column:1/-1}.zip-tool button:disabled{cursor:wait;opacity:.72}
 .preview{font-family:'DM Sans',sans-serif}.preview h1,.preview h2,.preview h3{font-family:'Syne',sans-serif;margin:0 0 10px}.preview h3{font-size:19px;color:var(--accent)}.preview p,.preview li{line-height:1.65;margin-bottom:8px}.preview ul,.preview ol{padding-left:22px;margin:10px 0 14px}.preview blockquote{border-left:3px solid var(--accent);background:rgba(212,255,87,.08);margin:14px 0;padding:10px 14px;color:var(--text)}.preview pre{background:#101114;border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;margin:14px 0}.preview code{background:rgba(255,255,255,.08);border-radius:5px;padding:2px 5px}.preview pre code{background:transparent;padding:0}.preview hr{border:0;border-top:1px solid var(--border);margin:20px 0}.table-wrap{overflow:auto;margin:14px 0}.preview table{width:100%;border-collapse:collapse;min-width:520px}.preview th,.preview td{border:1px solid var(--border);padding:9px 10px;text-align:left}.preview th{color:var(--text);background:rgba(255,255,255,.05)}
 .preview.markdown-body{background:#fff;color:#1f2328;color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;white-space:normal;--color-canvas-default:#fff;--color-canvas-subtle:#f6f8fa;--color-fg-default:#1f2328;--color-fg-muted:#59636e;--color-border-default:#d0d7de;--color-border-muted:#d8dee4}.preview.markdown-body h1,.preview.markdown-body h2,.preview.markdown-body h3{font-family:inherit;color:#1f2328}.preview.markdown-body h3{font-size:1.25em}.preview.markdown-body blockquote{background:transparent;color:#59636e;border-left-color:#d0d7de}.preview.markdown-body pre{background:#f6f8fa;border:0;color:#1f2328}.preview.markdown-body code{background:rgba(175,184,193,.2);color:#1f2328}.preview.markdown-body pre code{background:transparent;color:#1f2328}.preview.markdown-body table{display:table;width:100%;background:#fff;color:#1f2328}.preview.markdown-body th{background:#f6f8fa;color:#1f2328}.preview.markdown-body td{background:#fff;color:#1f2328}
 .canvas-wrap{display:flex;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;overflow:auto}
@@ -1876,7 +1956,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .site-footer{border-top:1px solid var(--border);margin-top:34px;padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.site-footer a{color:var(--text);text-decoration:none;font-weight:800}
 @media(max-width:760px){.json-columns{grid-template-columns:1fr}.json-area{min-height:300px}.json-toolbar .compact{flex:1 1 calc(50% - 8px)}}
 @media(max-width:760px){.markdown-toolbar,.markdown-workbench{grid-template-columns:1fr}.markdown-workbench{min-height:auto}.markdown-pane textarea,.markdown-preview{height:auto;min-height:420px}.markdown-stat{margin-left:0}}
-@media(max-width:620px){.two,.related{grid-template-columns:1fr}.wrap{padding-top:30px}.m3u8-input-row{grid-template-columns:1fr}.m3u8-play-btn{width:100%}.m3u8-controls{grid-template-columns:auto 1fr auto;gap:7px}.m3u8-progress{grid-column:1/-1;grid-row:1}#m3u8Current{display:none}.m3u8-volume{width:76px}.speed-group{grid-column:1/-1;justify-content:flex-start}.m3u8-time{min-width:36px}}
+@media(max-width:620px){.two,.related,.zip-options,.zip-analysis{grid-template-columns:1fr}.wrap{padding-top:30px}.m3u8-input-row{grid-template-columns:1fr}.m3u8-play-btn{width:100%}.m3u8-controls{grid-template-columns:auto 1fr auto;gap:7px}.m3u8-progress{grid-column:1/-1;grid-row:1}#m3u8Current{display:none}.m3u8-volume{width:76px}.speed-group{grid-column:1/-1;justify-content:flex-start}.m3u8-time{min-width:36px}}
 </style>
 </head>
 <body>

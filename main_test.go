@@ -981,3 +981,48 @@ func TestHandleIndexRendersPDFUnlocker(t *testing.T) {
 		}
 	}
 }
+
+func TestHandleIndexRendersFolderToZip(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/folder-to-zip", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>Folder to ZIP | Compress Folders Online Free - OnlineBox</title>",
+		`<meta name="description" content="Compress a folder into a ZIP file in your browser. No upload, no server — create ZIP files online for free.">`,
+		`<link rel="canonical" href="https://onlinebox.site/folder-to-zip">`,
+		`https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js`,
+		`<h1>Folder to ZIP<em>Compress Folders Online in Your Browser</em></h1>`,
+		`Create ZIP files from folders or multiple files directly in your browser.`,
+		`id="zipFolderInput"`,
+		`webkitdirectory multiple`,
+		`id="zipFilesInput"`,
+		`id="zipDrop"`,
+		`Drop files here or choose a folder`,
+		`id="zipLevel"`,
+		`<option value="9">Maximum</option>`,
+		`id="zipKeepPaths" type="checkbox" checked`,
+		`id="zipSkipJunk" type="checkbox" checked`,
+		`id="zipAnalysis"`,
+		`function createFolderZip`,
+		`fflate.zipSync(entries,{level})`,
+		`function zipKind(file)`,
+		`High compression expected for text, code, CSV, JSON and logs.`,
+		`already compressed, so ZIP may not become much smaller`,
+		`How to compress a folder to ZIP online`,
+		`Folder to ZIP in your browser`,
+		`What compresses well?`,
+		`Folder to ZIP FAQ`,
+		`No. Files are read by your browser and compressed locally with fflate.`,
+		`href="/image-compressor"`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected folder to ZIP page to contain %q", expected)
+		}
+	}
+}
