@@ -166,10 +166,10 @@ var publicPages = []publicPage{
 	{
 		Path:        "/gradient-generator",
 		Title:       "Gradient Generator | Generate CSS Gradients Online",
-		Description: "Generate random CSS gradients and color combinations for web backgrounds, social assets, landing pages and quick design exploration.",
+		Description: "Create CSS gradients online with presets, editable colors, live preview, one-click CSS copy and PNG download for web backgrounds and social assets.",
 		Heading:     "Gradient generator",
-		Accent:      "generate CSS gradients online",
-		Intro:       "Generate a CSS gradient, preview the result and copy the background code for websites, cards, banners and design experiments.",
+		Accent:      "create CSS gradients online",
+		Intro:       "Create a CSS gradient from presets, random colors or your own palette. Preview it, copy the background code or download a PNG for websites, cards and banners.",
 		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "gradient",
@@ -1327,12 +1327,22 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 <div class="canvas-wrap wide"><canvas id="socialCanvas" width="1200" height="630"></canvas></div>
 </section>`
 	case "gradient":
-		return `<section class="tool-panel">
-<label for="gradientDirection">Direction</label>
-<select id="gradientDirection"><option value="135deg">Diagonal</option><option value="90deg">Horizontal</option><option value="180deg">Vertical</option><option value="45deg">Soft angle</option></select>
-<button class="btn" onclick="generateGradient()">Generate gradient</button>
+		return `<section class="tool-panel gradient-tool">
+<div class="gradient-controls">
+<label for="gradientDirection">Direction<select id="gradientDirection" onchange="updateGradient()"><option value="135deg">Diagonal</option><option value="90deg">Horizontal</option><option value="180deg">Vertical</option><option value="45deg">Soft angle</option><option value="to right">To right</option><option value="to bottom">To bottom</option></select></label>
+<label>Color 1<input id="gradientColor1" type="color" value="#ff7a18" oninput="updateGradient()"></label>
+<label>Color 2<input id="gradientColor2" type="color" value="#af002d" oninput="updateGradient()"></label>
+<label>Color 3<input id="gradientColor3" type="color" value="#319197" oninput="updateGradient()"></label>
+</div>
+<div class="gradient-actions">
+<button class="btn compact" onclick="generateGradient()">Random</button>
+<button class="ghost compact" onclick="copyGradientCSS()">Copy CSS</button>
+<button class="ghost compact" onclick="downloadGradientPNG()">Download PNG</button>
+</div>
 <div id="gradientPreview" class="gradient-preview"></div>
-<pre id="gradientCode" class="output"></pre>
+<div id="gradientSwatches" class="gradient-swatches" aria-label="Gradient presets"></div>
+<pre id="gradientCode" class="output gradient-code"></pre>
+<div id="gradientStatus" class="hint" aria-live="polite"></div>
 </section>`
 	case "m3u8":
 		return `<section class="tool-panel m3u8-tool">
@@ -1587,7 +1597,7 @@ func landingGuideHTML(page publicPage) string {
 	case "/social-card-maker":
 		return utilityGuideHTML("social card maker", "Enter a title, subtitle and accent color, then generate a 1200x630 sharing image.", "It is useful for blog covers, product updates, social posts and launch announcements.")
 	case "/gradient-generator":
-		return utilityGuideHTML("gradient generator", "Choose a direction, generate a random gradient and copy the CSS background code.", "It is useful for website backgrounds, cards, banners, posters and visual exploration.")
+		return utilityGuideHTML("gradient generator", "Pick a preset, edit the colors or generate a random palette, then copy the CSS background code or download a PNG.", "It is useful for website backgrounds, cards, banners, posters, social graphics and quick visual exploration.")
 	case "/folder-to-zip":
 		return `<section class="guide">
 <h2>How to compress a folder to ZIP online</h2>
@@ -1746,9 +1756,27 @@ function wrapCanvasText(ctx,text,x,y,maxWidth,lineHeight){const words=text.split
 function renderSocialCard(download){const canvas=document.getElementById('socialCanvas');const ctx=canvas.getContext('2d');const accent=document.getElementById('cardAccent').value||'#d4ff57';ctx.fillStyle='#0e0e11';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle=accent;ctx.fillRect(0,0,26,canvas.height);ctx.fillStyle='#fff';ctx.font='800 72px sans-serif';wrapCanvasText(ctx,document.getElementById('cardTitle').value||'Browser Tool Suite',95,230,960,82);ctx.fillStyle='#b7b7b7';ctx.font='400 30px sans-serif';wrapCanvasText(ctx,document.getElementById('cardSubtitle').value||'Useful tools that run locally in your browser.',100,400,920,42);if(download)canvas.toBlob(blob=>downloadBlob(blob,'social-card.png'),'image/png');}
 renderSocialCard(false);`
 	case "gradient":
-		return `function randomColor(){return '#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');}
-function generateGradient(){const colors=[randomColor(),randomColor(),randomColor()];const direction=document.getElementById('gradientDirection').value;const css='linear-gradient('+direction+', '+colors.join(', ')+')';document.getElementById('gradientPreview').style.background=css;document.getElementById('gradientCode').textContent='background: '+css+';';}
-generateGradient();`
+		return `const gradientPresets=[
+{name:'Sunset',direction:'135deg',colors:['#ff7a18','#af002d','#319197']},
+{name:'Aurora',direction:'135deg',colors:['#00f5a0','#00d9f5','#7b61ff']},
+{name:'Candy',direction:'90deg',colors:['#f9ce34','#ee2a7b','#6228d7']},
+{name:'Ocean',direction:'135deg',colors:['#0f2027','#2c5364','#00c6ff']},
+{name:'Peach',direction:'45deg',colors:['#ffecd2','#fcb69f','#ff8177']},
+{name:'Midnight',direction:'135deg',colors:['#141e30','#243b55','#d4ff57']},
+{name:'Forest',direction:'90deg',colors:['#134e5e','#71b280','#dce35b']},
+{name:'Rose',direction:'180deg',colors:['#f857a6','#ff5858','#ffc371']}
+];
+function randomColor(){return '#'+Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');}
+function gradientColors(){return [document.getElementById('gradientColor1').value,document.getElementById('gradientColor2').value,document.getElementById('gradientColor3').value];}
+function gradientCSS(){return 'linear-gradient('+document.getElementById('gradientDirection').value+', '+gradientColors().join(', ')+')';}
+function setGradientStatus(message){document.getElementById('gradientStatus').textContent=message;}
+function updateGradient(){const css=gradientCSS();document.getElementById('gradientPreview').style.background=css;document.getElementById('gradientCode').textContent='background: '+css+';';setGradientStatus('');}
+function applyGradientPreset(index){const preset=gradientPresets[index];if(!preset)return;document.getElementById('gradientDirection').value=preset.direction;preset.colors.forEach((color,i)=>{document.getElementById('gradientColor'+(i+1)).value=color;});updateGradient();}
+function renderGradientPresets(){const wrap=document.getElementById('gradientSwatches');if(!wrap)return;wrap.textContent='';gradientPresets.forEach((preset,index)=>{const button=document.createElement('button');button.className='gradient-preset';button.type='button';button.title=preset.name;button.setAttribute('aria-label','Use '+preset.name+' gradient');button.onclick=()=>applyGradientPreset(index);const swatch=document.createElement('span');swatch.style.background='linear-gradient('+preset.direction+', '+preset.colors.join(', ')+')';button.appendChild(swatch);wrap.appendChild(button);});}
+function generateGradient(){document.getElementById('gradientColor1').value=randomColor();document.getElementById('gradientColor2').value=randomColor();document.getElementById('gradientColor3').value=randomColor();updateGradient();}
+async function copyGradientCSS(){const css='background: '+gradientCSS()+';';try{await navigator.clipboard.writeText(css);setGradientStatus('CSS copied.');return;}catch(error){}const code=document.getElementById('gradientCode');const range=document.createRange();range.selectNodeContents(code);const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);try{document.execCommand('copy');setGradientStatus('CSS copied.');}catch(error){setGradientStatus('Copy failed. Select the CSS manually.');}}
+function downloadGradientPNG(){const canvas=document.createElement('canvas');canvas.width=1600;canvas.height=900;const ctx=canvas.getContext('2d');const direction=document.getElementById('gradientDirection').value;const colors=gradientColors();let x0=0,y0=0,x1=canvas.width,y1=canvas.height;if(direction==='90deg'||direction==='to right'){y1=0;}else if(direction==='180deg'||direction==='to bottom'){x1=0;}else if(direction==='45deg'){x0=0;y0=canvas.height;x1=canvas.width;y1=0;}const grad=ctx.createLinearGradient(x0,y0,x1,y1);colors.forEach((color,index)=>grad.addColorStop(index/(colors.length-1),color));ctx.fillStyle=grad;ctx.fillRect(0,0,canvas.width,canvas.height);canvas.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='onlinebox-gradient.png';a.click();URL.revokeObjectURL(url);},'image/png');}
+renderGradientPresets();updateGradient();`
 	case "m3u8":
 		return `let m3u8Hls=null,m3u8HideTimer=null,m3u8Seeking=false;
 const m3u8Video=document.getElementById('m3u8Video');
@@ -1940,7 +1968,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .preview{font-family:'DM Sans',sans-serif}.preview h1,.preview h2,.preview h3{font-family:'Syne',sans-serif;margin:0 0 10px}.preview h3{font-size:19px;color:var(--accent)}.preview p,.preview li{line-height:1.65;margin-bottom:8px}.preview ul,.preview ol{padding-left:22px;margin:10px 0 14px}.preview blockquote{border-left:3px solid var(--accent);background:rgba(212,255,87,.08);margin:14px 0;padding:10px 14px;color:var(--text)}.preview pre{background:#101114;border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;margin:14px 0}.preview code{background:rgba(255,255,255,.08);border-radius:5px;padding:2px 5px}.preview pre code{background:transparent;padding:0}.preview hr{border:0;border-top:1px solid var(--border);margin:20px 0}.table-wrap{overflow:auto;margin:14px 0}.preview table{width:100%;border-collapse:collapse;min-width:520px}.preview th,.preview td{border:1px solid var(--border);padding:9px 10px;text-align:left}.preview th{color:var(--text);background:rgba(255,255,255,.05)}
 .preview.markdown-body{background:#fff;color:#1f2328;color-scheme:light;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;white-space:normal;--color-canvas-default:#fff;--color-canvas-subtle:#f6f8fa;--color-fg-default:#1f2328;--color-fg-muted:#59636e;--color-border-default:#d0d7de;--color-border-muted:#d8dee4}.preview.markdown-body h1,.preview.markdown-body h2,.preview.markdown-body h3{font-family:inherit;color:#1f2328}.preview.markdown-body h3{font-size:1.25em}.preview.markdown-body blockquote{background:transparent;color:#59636e;border-left-color:#d0d7de}.preview.markdown-body pre{background:#f6f8fa;border:0;color:#1f2328}.preview.markdown-body code{background:rgba(175,184,193,.2);color:#1f2328}.preview.markdown-body pre code{background:transparent;color:#1f2328}.preview.markdown-body table{display:table;width:100%;background:#fff;color:#1f2328}.preview.markdown-body th{background:#f6f8fa;color:#1f2328}.preview.markdown-body td{background:#fff;color:#1f2328}
 .canvas-wrap{display:flex;justify-content:center;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;overflow:auto}
-.canvas-wrap canvas{max-width:100%;height:auto}.wide canvas{width:100%;max-width:520px}.gradient-preview{height:210px;border-radius:12px;border:1px solid var(--border);margin-top:16px}
+.canvas-wrap canvas{max-width:100%;height:auto}.wide canvas{width:100%;max-width:520px}.gradient-tool{display:grid;gap:14px}.gradient-controls{display:grid;grid-template-columns:1.25fr repeat(3,minmax(92px,1fr));gap:12px;align-items:end}.gradient-controls label{margin:0}.gradient-controls input[type=color]{height:48px;padding:5px;cursor:pointer}.gradient-actions{display:flex;gap:10px;flex-wrap:wrap}.gradient-preview{height:260px;border-radius:12px;border:1px solid var(--border);box-shadow:inset 0 0 0 1px rgba(255,255,255,.04);transition:background .18s ease}.gradient-swatches{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.gradient-preset{border:1px solid var(--border);border-radius:10px;min-height:56px;cursor:pointer;padding:0;overflow:hidden;background:var(--surface2);transition:transform .16s,border-color .16s}.gradient-preset:hover,.gradient-preset:focus-visible{border-color:var(--accent);outline:0;transform:translateY(-1px)}.gradient-preset span{display:block;height:100%;min-height:54px}.gradient-code{min-height:90px}
 .m3u8-tool{display:grid;gap:14px}.m3u8-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:stretch}.m3u8-input-row input{min-width:0}.m3u8-play-btn{width:auto;margin-top:0;min-width:112px;align-items:center}
 .m3u8-player{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:8px;box-shadow:0 16px 38px rgba(0,0,0,.38);overflow:hidden;border:1px solid var(--border)}
 .m3u8-player video{width:100%;height:100%;display:block;background:#000;object-fit:contain}
@@ -1956,7 +1984,7 @@ textarea:focus,input:focus,select:focus{border-color:var(--accent)}
 .site-footer{border-top:1px solid var(--border);margin-top:34px;padding-top:18px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:13px}.site-footer a{color:var(--text);text-decoration:none;font-weight:800}
 @media(max-width:760px){.json-columns{grid-template-columns:1fr}.json-area{min-height:300px}.json-toolbar .compact{flex:1 1 calc(50% - 8px)}}
 @media(max-width:760px){.markdown-toolbar,.markdown-workbench{grid-template-columns:1fr}.markdown-workbench{min-height:auto}.markdown-pane textarea,.markdown-preview{height:auto;min-height:420px}.markdown-stat{margin-left:0}}
-@media(max-width:620px){.two,.related,.zip-options,.zip-analysis{grid-template-columns:1fr}.wrap{padding-top:30px}.m3u8-input-row{grid-template-columns:1fr}.m3u8-play-btn{width:100%}.m3u8-controls{grid-template-columns:auto 1fr auto;gap:7px}.m3u8-progress{grid-column:1/-1;grid-row:1}#m3u8Current{display:none}.m3u8-volume{width:76px}.speed-group{grid-column:1/-1;justify-content:flex-start}.m3u8-time{min-width:36px}}
+@media(max-width:620px){.two,.related,.zip-options,.zip-analysis,.gradient-controls,.gradient-swatches{grid-template-columns:1fr}.wrap{padding-top:30px}.gradient-actions .compact{flex:1 1 100%}.gradient-preview{height:220px}.m3u8-input-row{grid-template-columns:1fr}.m3u8-play-btn{width:100%}.m3u8-controls{grid-template-columns:auto 1fr auto;gap:7px}.m3u8-progress{grid-column:1/-1;grid-row:1}#m3u8Current{display:none}.m3u8-volume{width:76px}.speed-group{grid-column:1/-1;justify-content:flex-start}.m3u8-time{min-width:36px}}
 </style>
 </head>
 <body>
