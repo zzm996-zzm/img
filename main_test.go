@@ -410,6 +410,33 @@ func TestHandleIndexRendersUtilityLandingPage(t *testing.T) {
 	}
 }
 
+func TestHandleIndexRendersGradientGeneratorSearchSnippet(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	req := httptest.NewRequest(http.MethodGet, "/gradient-generator", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	body := rr.Body.String()
+	for _, expected := range []string{
+		"<title>Free CSS Gradient Generator | Copy Gradient CSS Online</title>",
+		`<meta name="description" content="Free CSS gradient generator - create custom linear gradients instantly, preview them live and copy the CSS code with one click. No signup, runs in your browser.">`,
+		`<link rel="canonical" href="https://onlinebox.site/gradient-generator">`,
+		"<h1>CSS gradient generator<em>create and copy gradients online</em></h1>",
+		"Copy the CSS code with one click",
+		"no signup",
+		"CSS Gradient Generator FAQ",
+		"Can I copy the CSS gradient code?",
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected gradient page to contain %q", expected)
+		}
+	}
+}
+
 func TestHandleIndexRendersJSONFormatter(t *testing.T) {
 	t.Setenv("SITE_URL", "https://onlinebox.site/")
 	req := httptest.NewRequest(http.MethodGet, "/json-formatter", nil)

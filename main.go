@@ -165,11 +165,11 @@ var publicPages = []publicPage{
 	},
 	{
 		Path:        "/gradient-generator",
-		Title:       "Gradient Generator | Generate CSS Gradients Online",
-		Description: "Create CSS gradients and gradient cards online with presets, editable colors, live preview, one-click CSS copy and PNG download for web backgrounds and social assets.",
-		Heading:     "Gradient generator",
-		Accent:      "create CSS gradients online",
-		Intro:       "Create a CSS gradient from presets, random colors or your own palette. Preview it as a background or styled card, then copy the CSS or download a PNG for websites, cards and banners.",
+		Title:       "Free CSS Gradient Generator | Copy Gradient CSS Online",
+		Description: "Free CSS gradient generator - create custom linear gradients instantly, preview them live and copy the CSS code with one click. No signup, runs in your browser.",
+		Heading:     "CSS gradient generator",
+		Accent:      "create and copy gradients online",
+		Intro:       "Create a custom linear CSS gradient from presets, random colors or your own palette. Preview it live, copy the CSS code with one click or download a PNG for websites, cards and banners. No signup required.",
 		Kind:        "utility",
 		PageTool:    "compress",
 		PageUtility: "gradient",
@@ -1608,7 +1608,23 @@ func landingGuideHTML(page publicPage) string {
 	case "/social-card-maker":
 		return utilityGuideHTML("social card maker", "Enter a title, subtitle and accent color, then generate a 1200x630 sharing image.", "It is useful for blog covers, product updates, social posts and launch announcements.")
 	case "/gradient-generator":
-		return utilityGuideHTML("gradient generator", "Pick a preset, edit the colors, choose a card size and style, then copy the CSS background code or download a PNG.", "It is useful for website backgrounds, cards, banners, posters, social graphics, launch notes and quick visual exploration.")
+		return `<section class="guide">
+<h2>How to use the CSS gradient generator</h2>
+<ol>
+<li>Pick a preset or generate random colors, then adjust the direction and color stops.</li>
+<li>Preview the linear gradient live as a background or card design.</li>
+<li>Copy the CSS code with one click, or download a PNG for a card, banner or social graphic.</li>
+</ol>
+<h2>When is the CSS gradient generator useful?</h2>
+<p>Use it for website backgrounds, hero sections, cards, banners, posters, social graphics, launch notes and quick visual exploration. The gradient preview and CSS output run in your browser, with no signup required.</p>
+<section class="faq-block">
+<h2>CSS Gradient Generator FAQ</h2>
+<details open><summary>Can I copy the CSS gradient code?</summary><p>Yes. Click Copy CSS to copy the generated background declaration and paste it into your stylesheet.</p></details>
+<details><summary>Does this support linear gradients?</summary><p>Yes. The current generator focuses on editable linear CSS gradients with live preview, presets and PNG export.</p></details>
+<details><summary>Do I need to create an account?</summary><p>No. The gradient generator is free to use with no signup.</p></details>
+<details><summary>Does the gradient upload to a server?</summary><p>No. Color editing, preview, CSS copy and PNG export run in your browser.</p></details>
+</section>
+</section>`
 	case "/folder-to-zip":
 		return `<section class="guide">
 <h2>How to compress a folder to ZIP online</h2>
