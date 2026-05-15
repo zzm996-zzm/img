@@ -51,11 +51,12 @@ func init() {
 }
 
 const (
-	sessionCookieName = "imgtools_session"
-	passwordIter      = 120000
-	maxJSONBody       = 32 << 10
-	authWindow        = 10 * time.Minute
-	authMaxHits       = 30
+	sessionCookieName  = "imgtools_session"
+	passwordIter       = 120000
+	maxJSONBody        = 32 << 10
+	authWindow         = 10 * time.Minute
+	authMaxHits        = 30
+	defaultSiteLastMod = "2026-05-15"
 )
 
 type publicPage struct {
@@ -358,7 +359,7 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	setIndexablePageHeaders(w, siteLastMod())
 	w.Write([]byte(renderIndexHTML(page)))
 }
 
@@ -640,7 +641,7 @@ func handleBlogIndex(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "blog unavailable", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	setIndexablePageHeaders(w, latestBlogIndexLastMod(posts))
 	w.Write([]byte(renderBlogIndexHTML(posts)))
 }
 
@@ -664,7 +665,7 @@ func handleBlogPost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "blog unavailable", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	setIndexablePageHeaders(w, post.Date)
 	w.Write([]byte(renderBlogPostHTML(post)))
 }
 
@@ -2261,6 +2262,22 @@ func handleFavicon(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(faviconSVG))
 }
 
+func setIndexablePageHeaders(w http.ResponseWriter, lastMod string) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("X-Robots-Tag", "index, follow")
+	if value, ok := httpDateHeader(lastMod); ok {
+		w.Header().Set("Last-Modified", value)
+	}
+}
+
+func httpDateHeader(date string) (string, bool) {
+	parsed, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		return "", false
+	}
+	return parsed.UTC().Format(http.TimeFormat), true
+}
+
 type sitemapURLSet struct {
 	XMLName xml.Name     `xml:"urlset"`
 	Xmlns   string       `xml:"xmlns,attr"`
@@ -2295,7 +2312,7 @@ func sitemapURLs() []sitemapURL {
 		log.Printf("sitemap blog load error: %v", err)
 	}
 	urls := make([]sitemapURL, 0, len(publicPages)+1+len(posts))
-	lastMod := time.Now().UTC().Format("2006-01-02")
+	lastMod := siteLastMod()
 	for _, page := range publicPages {
 		priority := "0.8"
 		if page.Path == "/" {
@@ -2310,7 +2327,7 @@ func sitemapURLs() []sitemapURL {
 	}
 	urls = append(urls, sitemapURL{
 		Loc:        siteURL() + "/blog",
-		LastMod:    lastMod,
+		LastMod:    latestBlogIndexLastMod(posts),
 		ChangeFreq: "weekly",
 		Priority:   "0.7",
 	})
@@ -2325,12 +2342,38 @@ func sitemapURLs() []sitemapURL {
 	return urls
 }
 
+func latestBlogIndexLastMod(posts []blogPost) string {
+	lastMod := siteLastMod()
+	latest, err := time.Parse("2006-01-02", lastMod)
+	if err != nil {
+		return defaultSiteLastMod
+	}
+	for _, post := range posts {
+		if post.dateValue.After(latest) {
+			latest = post.dateValue
+			lastMod = post.Date
+		}
+	}
+	return lastMod
+}
+
 func siteURL() string {
 	raw := strings.TrimSpace(os.Getenv("SITE_URL"))
 	if raw == "" {
 		raw = "https://onlinebox.site"
 	}
 	return strings.TrimRight(raw, "/")
+}
+
+func siteLastMod() string {
+	raw := strings.TrimSpace(os.Getenv("SITE_LASTMOD"))
+	if raw == "" {
+		return defaultSiteLastMod
+	}
+	if _, err := time.Parse("2006-01-02", raw); err != nil {
+		return defaultSiteLastMod
+	}
+	return raw
 }
 
 func openDB() (*sql.DB, error) {

@@ -14,7 +14,8 @@ import (
 
 type testSitemapURLSet struct {
 	URLs []struct {
-		Loc string `xml:"loc"`
+		Loc     string `xml:"loc"`
+		LastMod string `xml:"lastmod"`
 	} `xml:"url"`
 }
 
@@ -182,6 +183,7 @@ func TestRefundRevokesPaidLicense(t *testing.T) {
 
 func TestHandleSitemap(t *testing.T) {
 	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	t.Setenv("SITE_LASTMOD", "2026-05-12")
 	setupBlogContent(t, map[string]string{
 		"older.md": `---
 title: Older Post
@@ -218,6 +220,9 @@ Hello.`,
 	}
 	if parsed.URLs[0].Loc != "https://onlinebox.site/" {
 		t.Fatalf("unexpected sitemap urls: %#v", parsed.URLs)
+	}
+	if parsed.URLs[0].LastMod != "2026-05-12" {
+		t.Fatalf("expected stable site lastmod, got %q", parsed.URLs[0].LastMod)
 	}
 	var foundCompressor bool
 	var foundPrivacy bool
@@ -262,6 +267,28 @@ Hello.`,
 	}
 	if !foundBlogPost {
 		t.Fatalf("expected blog post URL in sitemap: %#v", parsed.URLs)
+	}
+}
+
+func TestIndexablePagesSetRobotAndLastModifiedHeaders(t *testing.T) {
+	t.Setenv("SITE_LASTMOD", "2026-05-12")
+	req := httptest.NewRequest(http.MethodGet, "/json-formatter", nil)
+	rr := httptest.NewRecorder()
+
+	handleIndex(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("expected status 200, got %d body=%s", rr.Code, rr.Body.String())
+	}
+	if got := rr.Header().Get("X-Robots-Tag"); got != "index, follow" {
+		t.Fatalf("expected indexable robots header, got %q", got)
+	}
+	parsed, err := http.ParseTime(rr.Header().Get("Last-Modified"))
+	if err != nil {
+		t.Fatalf("expected valid Last-Modified header, got %q: %v", rr.Header().Get("Last-Modified"), err)
+	}
+	if got := parsed.Format("2006-01-02"); got != "2026-05-12" {
+		t.Fatalf("expected Last-Modified date 2026-05-12, got %s", got)
 	}
 }
 
