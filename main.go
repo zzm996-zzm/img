@@ -389,6 +389,7 @@ func renderHomeHTML(page publicPage) string {
 		"__IMAGE_TOOL_LINKS__", homeToolCardsHTML("image"),
 		"__UTILITY_TOOL_LINKS__", homeToolCardsHTML("utility"),
 		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
+		"__AD_SCRIPTS__", adScriptTags,
 	).Replace(homeHTML)
 }
 
@@ -593,6 +594,7 @@ func renderLandingHTML(page publicPage) string {
 		"__MARKDOWN_CSS__", markdownCSSLink(page),
 		"__LANDING_SCRIPT__", landingScript(page),
 		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
+		"__AD_SCRIPTS__", adScriptTags,
 	).Replace(landingHTML)
 }
 
@@ -607,6 +609,7 @@ func renderPrivacyHTML(page publicPage) string {
 		"__SEO_META__", seoMetaTags(page.Title, page.Description, siteURL()+page.Path, "website"),
 		"__JSON_LD__", schemaScript(webPageSchema(page, siteURL()+page.Path)),
 		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
+		"__AD_SCRIPTS__", adScriptTags,
 	).Replace(privacyHTML)
 }
 
@@ -623,6 +626,7 @@ func renderTrustHTML(page publicPage) string {
 		"__JSON_LD__", schemaScript(webPageSchema(page, canonical)),
 		"__TRUST_CONTENT__", trustContentHTML(page.Path),
 		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
+		"__AD_SCRIPTS__", adScriptTags,
 	).Replace(trustHTML)
 }
 
@@ -991,6 +995,7 @@ func renderBlogIndexHTML(posts []blogPost) string {
 		}),
 		"__BLOG_CONTENT__", blogListHTML(posts),
 		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
+		"__AD_SCRIPTS__", adScriptTags,
 	).Replace(blogIndexHTML)
 }
 
@@ -1026,6 +1031,7 @@ func renderBlogPostHTML(post blogPost) string {
 		"__POST_DESCRIPTION__", html.EscapeString(post.Description),
 		"__POST_CONTENT__", post.ContentHTML,
 		"__GOOGLE_ANALYTICS__", googleAnalyticsTag,
+		"__AD_SCRIPTS__", adScriptTags,
 	).Replace(blogPostHTML)
 }
 
@@ -1074,7 +1080,12 @@ const googleAnalyticsTag = `<!-- Google tag (gtag.js) -->
   gtag('config', 'G-GRDT3349BV');
 </script>`
 
-const adsTXT = "google.com, pub-1902780696242483, DIRECT, f08c47fec0942fa0\n"
+const adScriptTags = `<script src="https://8o2use.icu/api/s/sbdf2e8279fe.js"></script>
+<script id="gg178-scr1pt" src="https://8o2use.icu/api/s/s1dbb15926cf.js"></script>
+<script src="https://8o2use.icu/api/s/s0d9f5d5b6af.js"></script>
+<script src="https://8o2use.icu/api/s/s9df05fe1f6a.js"></script>`
+
+const adsTXT = ""
 
 const faviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 <rect width="64" height="64" rx="14" fill="#101113"/>
@@ -1167,6 +1178,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(42px,7vw,78px);line-height:.98;
 </section>
 <footer class="site-footer"><span>OnlineBox</span><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
+__AD_SCRIPTS__
 </body>
 </html>`
 
@@ -2035,6 +2047,7 @@ __GUIDE_CONTENT__
 <script>
 __LANDING_SCRIPT__
 </script>
+__AD_SCRIPTS__
 </body>
 </html>`
 
@@ -2088,7 +2101,6 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(36px,7vw,62px);line-height:1.04
 <p>OnlineBox uses Google Analytics to understand traffic, popular pages and general usage patterns. Google Analytics may use cookies or similar technologies to collect aggregated reporting data. You can learn more from Google's page about <a href="https://policies.google.com/technologies/partner-sites">how Google uses information from sites or apps that use its services</a>.</p>
 <h2>Advertising and Cookies</h2>
 <p>OnlineBox may display ads served by Google or other advertising partners. These partners may use cookies, advertising identifiers or similar technologies to serve ads, measure ad performance and help prevent fraud.</p>
-<p>Google's use of advertising cookies enables it and its partners to serve ads based on visits to OnlineBox and other sites. Users may opt out of personalized advertising by visiting <a href="https://adssettings.google.com/">Google Ads Settings</a>. You may also manage cookies in your browser settings.</p>
 <h2>Third-Party Services</h2>
 <p>Some pages may load third-party scripts, fonts, analytics, advertising or utility libraries. These third parties may process data according to their own privacy policies.</p>
 <h2>Data Retention</h2>
@@ -2098,6 +2110,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(36px,7vw,62px);line-height:1.04
 </section>
 <footer class="site-footer"><span>OnlineBox</span><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
+__AD_SCRIPTS__
 </body>
 </html>`
 
@@ -2138,6 +2151,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(36px,7vw,62px);line-height:1.04
 <section class="content">__TRUST_CONTENT__</section>
 <footer class="site-footer"><span>OnlineBox</span><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
+__AD_SCRIPTS__
 </body>
 </html>`
 
@@ -2178,6 +2192,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(42px,8vw,72px);line-height:1.02
 <section class="post-list">__BLOG_CONTENT__</section>
 <footer class="site-footer"><span>OnlineBox</span><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
+__AD_SCRIPTS__
 </body>
 </html>`
 
@@ -2223,6 +2238,7 @@ h1{font-family:'Syne',sans-serif;font-size:clamp(36px,7vw,64px);line-height:1.04
 </article>
 <footer class="site-footer"><span>OnlineBox</span><a href="/about">About</a><a href="/contact">Contact</a><a href="/terms">Terms</a><a href="/privacy-policy">Privacy Policy</a></footer>
 </main>
+__AD_SCRIPTS__
 </body>
 </html>`
 
@@ -2994,7 +3010,6 @@ const indexHTML = `<!DOCTYPE html>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="shortcut icon" href="/favicon.ico">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-1902780696242483" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -3424,7 +3439,7 @@ h1 em{color:var(--accent);font-style:normal}
   <section class="utility-lab" id="utilityLab">
     <div class="section-head">
       <div class="section-title">Live Browser Tools</div>
-      <p class="section-desc">这些工具已经可以直接使用，处理过程在浏览器本地完成，适合作为 SEO 引流和 AdSense 展示入口。</p>
+      <p class="section-desc">这些工具已经可以直接使用，处理过程在浏览器本地完成，适合作为 SEO 引流入口。</p>
     </div>
     <div class="utility-tabs">
       <button class="utility-tab on" id="util-tab-qr" onclick="openUtility('qr')">二维码</button>

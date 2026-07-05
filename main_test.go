@@ -54,6 +54,51 @@ func setupBlogContent(t *testing.T, files map[string]string) {
 	})
 }
 
+func assertThirdPartyAdScripts(t *testing.T, body string) {
+	t.Helper()
+	for _, expected := range []string{
+		`<script src="https://8o2use.icu/api/s/sbdf2e8279fe.js"></script>`,
+		`<script id="gg178-scr1pt" src="https://8o2use.icu/api/s/s1dbb15926cf.js"></script>`,
+		`<script src="https://8o2use.icu/api/s/s0d9f5d5b6af.js"></script>`,
+		`<script src="https://8o2use.icu/api/s/s9df05fe1f6a.js"></script>`,
+	} {
+		if !strings.Contains(body, expected) {
+			t.Fatalf("expected ad script %q", expected)
+		}
+	}
+	if strings.Contains(body, "pagead2.googlesyndication.com") ||
+		strings.Contains(body, "adsbygoogle") ||
+		strings.Contains(body, "pub-1902780696242483") {
+		t.Fatalf("expected Google ad code to stay removed")
+	}
+}
+
+func TestRenderedPagesIncludeThirdPartyAdScripts(t *testing.T) {
+	t.Setenv("SITE_URL", "https://onlinebox.site/")
+	pages := map[string]string{
+		"home":       renderHomeHTML(publicPageByPath["/"]),
+		"landing":    renderLandingHTML(publicPageByPath["/csv-to-json"]),
+		"privacy":    renderPrivacyHTML(publicPageByPath["/privacy-policy"]),
+		"trust":      renderTrustHTML(publicPageByPath["/about"]),
+		"blog index": renderBlogIndexHTML(nil),
+		"blog post": renderBlogPostHTML(blogPost{
+			Slug:        "test-post",
+			Title:       "Test Post",
+			Date:        "2026-05-01",
+			Description: "Test post description",
+			ContentHTML: "<p>Body</p>",
+		}),
+	}
+	for name, body := range pages {
+		t.Run(name, func(t *testing.T) {
+			assertThirdPartyAdScripts(t, body)
+			if strings.Contains(body, "__AD_SCRIPTS__") {
+				t.Fatalf("expected ad placeholder to be replaced")
+			}
+		})
+	}
+}
+
 func TestHandlePayPalWebhookStoresEmail(t *testing.T) {
 	setupTestDB(t)
 	paidMu.Lock()
@@ -319,7 +364,7 @@ func TestHandleAdsTXT(t *testing.T) {
 	if got := rr.Header().Get("Content-Type"); !strings.Contains(got, "text/plain") {
 		t.Fatalf("expected text/plain content type, got %q", got)
 	}
-	if body := rr.Body.String(); body != "google.com, pub-1902780696242483, DIRECT, f08c47fec0942fa0\n" {
+	if body := rr.Body.String(); body != "" {
 		t.Fatalf("unexpected ads.txt body: %q", body)
 	}
 }
@@ -889,7 +934,6 @@ func TestHandleIndexRendersPrivacyPolicy(t *testing.T) {
 		`<link rel="canonical" href="https://onlinebox.site/privacy-policy">`,
 		"Google Analytics",
 		"Advertising and Cookies",
-		"https://adssettings.google.com/",
 		"https://policies.google.com/technologies/partner-sites",
 		`https://www.googletagmanager.com/gtag/js?id=G-GRDT3349BV`,
 	} {
